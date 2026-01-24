@@ -1,0 +1,38 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Docker volumes
+mysql_data/
+redis_data/
+
+# Uploads
+uploads/*
+!uploads/.gitkeep
+
+# Test
+coverage/
+
+# Misc
+*.lock
+.cache

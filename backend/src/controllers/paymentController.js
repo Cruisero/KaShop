@@ -1,0 +1,267 @@
+// 支付控制器
+const prisma = require('../config/database')
+const { dispenseCards } = require('./cardController')
+const logger = require('../utils/logger')
+
+// 支付方式配置
+const paymentMethods = [
+    { id: 'alipay', name: '支付宝', icon: 'alipay', enabled: true },
+    { id: 'wechat', name: '微信支付', icon: 'wechat', enabled: true },
+    { id: 'usdt', name: 'USDT', icon: 'usdt', enabled: false }
+]
+
+// 获取支付方式列表
+exports.getPaymentMethods = async (req, res, next) => {
+    try {
+        res.json({ methods: paymentMethods })
+    } catch (error) {
+        next(error)
+    }
+}
+
+// 创建支付订单
+exports.createPayment = async (req, res, next) => {
+    try {
+        const { orderNo, paymentMethod } = req.body
+
+        // 查询订单
+        const order = await prisma.order.findUnique({
+            where: { orderNo }
+        })
+
+        if (!order) {
+            return res.status(404).json({ error: '订单不存在' })
+        }
+
+        if (order.status !== 'PENDING') {
+            return res.status(400).json({ error: '订单状态异常' })
+        }
+
+        // 创建支付记录
+        const payment = await prisma.payment.upsert({
+            where: { orderId: order.id },
+            create: {
+                orderId: order.id,
+                paymentMethod,
+                amount: order.totalAmount,
+                status: 'PENDING'
+            },
+            update: {
+                paymentMethod,
+                status: 'PENDING'
+            }
+        })
+
+        // 根据支付方式生成支付链接
+        let payUrl = ''
+        if (paymentMethod === 'alipay') {
+            payUrl = await generateAlipayUrl(order, payment)
+        } else if (paymentMethod === 'wechat') {
+            payUrl = await generateWechatUrl(order, payment)
+        }
+
+        res.json({
+            paymentId: payment.id,
+            payUrl,
+            orderNo: order.orderNo,
+            amount: parseFloat(order.totalAmount)
+        })
+    } catch (error) {
+        next(error)
+    }
+}
+
+// 生成支付宝支付链接 (模拟)
+async function generateAlipayUrl(order, payment) {
+    // 实际项目中这里接入支付宝 SDK
+    // 现在返回一个模拟的支付页面
+    const params = new URLSearchParams({
+        orderNo: order.orderNo,
+        amount: order.totalAmount.toString(),
+        subject: order.productName
+    })
+    return `/api/payment/mock?${params.toString()}`
+}
+
+// 生成微信支付链接 (模拟)
+async function generateWechatUrl(order, payment) {
+    const params = new URLSearchParams({
+        orderNo: order.orderNo,
+        amount: order.totalAmount.toString(),
+        subject: order.productName
+    })
+    return `/api/payment/mock?${params.toString()}`
+}
+
+// 支付宝回调
+exports.alipayCallback = async (req, res, next) => {
+    try {
+        const { out_trade_no, trade_no, trade_status } = req.body
+
+        logger.info('支付宝回调:', { out_trade_no, trade_no, trade_status })
+
+        if (trade_status === 'TRADE_SUCCESS' || trade_status === 'TRADE_FINISHED') {
+            await processPaymentSuccess(out_trade_no, trade_no, 'alipay')
+        }
+
+        res.send('success')
+    } catch (error) {
+        logger.error('支付宝回调处理失败:', error)
+        res.send('fail')
+    }
+}
+
+// 微信回调
+exports.wechatCallback = async (req, res, next) => {
+    try {
+        const { out_trade_no, transaction_id, result_code } = req.body
+
+        logger.info('微信回调:', { out_trade_no, transaction_id, result_code })
+
+        if (result_code === 'SUCCESS') {
+            await processPaymentSuccess(out_trade_no, transaction_id, 'wechat')
+        }
+
+        res.json({ code: 'SUCCESS', message: '成功' })
+    } catch (error) {
+        logger.error('微信回调处理失败:', error)
+        res.json({ code: 'FAIL', message: error.message })
+    }
+}
+
+// 处理支付成功
+async function processPaymentSuccess(orderNo, tradeNo, paymentMethod) {
+    const order = await prisma.order.findUnique({
+        where: { orderNo },
+        include: { payment: true }
+    })
+
+    if (!order || order.status === 'COMPLETED') {
+        return // 订单不存在或已处理
+    }
+
+    // 开启事务
+    await prisma.$transaction(async (tx) => {
+        // 更新支付记录
+        await tx.payment.update({
+            where: { orderId: order.id },
+            data: {
+                status: 'SUCCESS',
+                tradeNo
+            }
+        })
+
+        // 更新订单状态
+        await tx.order.update({
+            where: { id: order.id },
+            data: {
+                status: 'PAID',
+                paymentNo: tradeNo,
+                paidAt: new Date()
+            }
+        })
+    })
+
+    // 发放卡密
+    try {
+        await dispenseCards(order.id, order.productId, order.quantity)
+
+        // 更新订单为已完成
+        await prisma.order.update({
+            where: { id: order.id },
+            data: {
+                status: 'COMPLETED',
+                completedAt: new Date()
+            }
+        })
+
+        logger.info(`订单 ${orderNo} 卡密发放成功`)
+    } catch (error) {
+        logger.error(`订单 ${orderNo} 卡密发放失败:`, error)
+    }
+}
+
+// 查询支付状态
+exports.getPaymentStatus = async (req, res, next) => {
+    try {
+        const { orderNo } = req.params
+
+        const order = await prisma.order.findUnique({
+            where: { orderNo },
+            include: { payment: true }
+        })
+
+        if (!order) {
+            return res.status(404).json({ error: '订单不存在' })
+        }
+
+        res.json({
+            orderNo: order.orderNo,
+            orderStatus: order.status.toLowerCase(),
+            paymentStatus: order.payment?.status?.toLowerCase() || 'pending',
+            paidAt: order.paidAt
+        })
+    } catch (error) {
+        next(error)
+    }
+}
+
+// 模拟支付 (开发测试用)
+exports.mockPayment = async (req, res, next) => {
+    try {
+        const { orderNo } = req.query
+
+        if (!orderNo) {
+            return res.status(400).send('缺少订单号')
+        }
+
+        // 返回模拟支付页面
+        res.send(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>模拟支付</title>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <style>
+          body { font-family: sans-serif; max-width: 400px; margin: 50px auto; padding: 20px; text-align: center; }
+          .card { background: #f5f5f5; padding: 30px; border-radius: 8px; }
+          .amount { font-size: 32px; color: #1677ff; margin: 20px 0; }
+          button { width: 100%; padding: 15px; font-size: 16px; border: none; border-radius: 4px; cursor: pointer; margin: 5px 0; }
+          .pay-btn { background: #1677ff; color: white; }
+          .cancel-btn { background: #f5f5f5; color: #666; }
+        </style>
+      </head>
+      <body>
+        <div class="card">
+          <h2>模拟支付</h2>
+          <p>订单号: ${orderNo}</p>
+          <div class="amount">¥${req.query.amount || '0.00'}</div>
+          <p>商品: ${req.query.subject || '未知商品'}</p>
+          <form action="/api/payment/mock/confirm" method="POST">
+            <input type="hidden" name="orderNo" value="${orderNo}">
+            <button type="submit" class="pay-btn">确认支付</button>
+          </form>
+          <button class="cancel-btn" onclick="history.back()">取消</button>
+        </div>
+      </body>
+      </html>
+    `)
+    } catch (error) {
+        next(error)
+    }
+}
+
+// 确认模拟支付
+exports.confirmMockPayment = async (req, res, next) => {
+    try {
+        const { orderNo } = req.body
+
+        await processPaymentSuccess(orderNo, `MOCK${Date.now()}`, 'mock')
+
+        // 重定向到订单结果页
+        res.redirect(`http://localhost:3000/order/${orderNo}`)
+    } catch (error) {
+        next(error)
+    }
+}

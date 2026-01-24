@@ -1,0 +1,328 @@
+/* 商品详情页样式 */
+.product-detail-page {
+    padding: 20px 0;
+}
+
+/* 返回按钮 */
+.back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    margin-bottom: 24px;
+    background: transparent;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.back-btn:hover {
+    color: var(--text-primary);
+    border-color: var(--primary);
+    background: rgba(99, 102, 241, 0.1);
+}
+
+/* 主容器 */
+.product-detail-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 48px;
+    margin-bottom: 48px;
+}
+
+/* 图片区域 */
+.product-gallery {
+    position: sticky;
+    top: 100px;
+}
+
+.main-image {
+    position: relative;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+}
+
+.main-image img {
+    width: 100%;
+    height: 400px;
+    object-fit: cover;
+}
+
+.detail-tags {
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    display: flex;
+    gap: 8px;
+}
+
+.detail-tag {
+    padding: 6px 14px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: white;
+    background: var(--gradient-primary);
+    border-radius: 16px;
+}
+
+/* 商品信息 */
+.product-main-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.detail-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 12px;
+    line-height: 1.4;
+}
+
+.detail-desc {
+    font-size: 1rem;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    margin-bottom: 24px;
+}
+
+/* 价格区域 */
+.price-section {
+    background: var(--gradient-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 20px;
+    margin-bottom: 24px;
+}
+
+.price-row {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.price-label {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
+.price-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--primary-light);
+}
+
+.price-section .price-original {
+    font-size: 1rem;
+    color: var(--text-muted);
+    text-decoration: line-through;
+}
+
+.discount-badge {
+    padding: 4px 10px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: white;
+    background: var(--error);
+    border-radius: 12px;
+}
+
+.sales-row {
+    display: flex;
+    gap: 24px;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+/* 数量选择 */
+.quantity-section {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    margin-bottom: 24px;
+    padding: 20px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+}
+
+.quantity-label {
+    font-size: 0.95rem;
+    color: var(--text-secondary);
+}
+
+.quantity-control {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--bg-secondary);
+    border-radius: var(--radius-sm);
+    padding: 4px;
+}
+
+.qty-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    background: transparent;
+    border: none;
+    color: var(--text-primary);
+    font-size: 1rem;
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+    transition: all var(--transition-fast);
+}
+
+.qty-btn:hover:not(:disabled) {
+    background: rgba(99, 102, 241, 0.2);
+    color: var(--primary-light);
+}
+
+.qty-btn:disabled {
+    color: var(--text-muted);
+    cursor: not-allowed;
+}
+
+.qty-value {
+    width: 50px;
+    text-align: center;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.qty-total {
+    margin-left: auto;
+    font-size: 0.95rem;
+    color: var(--text-secondary);
+}
+
+.qty-total strong {
+    color: var(--primary-light);
+    font-size: 1.1rem;
+}
+
+/* 购买按钮 */
+.action-buttons {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.action-buttons .btn-lg {
+    flex: 1;
+    padding: 16px 24px;
+}
+
+/* 服务保障 */
+.service-guarantee {
+    display: flex;
+    gap: 24px;
+    padding: 16px 20px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+}
+
+.guarantee-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.guarantee-item svg {
+    color: var(--success);
+}
+
+/* 商品详情描述 */
+.product-description-section {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 32px;
+}
+
+.section-subtitle {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.description-content {
+    color: var(--text-secondary);
+    line-height: 1.8;
+}
+
+.description-content pre {
+    font-family: inherit;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+/* 商品不存在 */
+.product-not-found {
+    text-align: center;
+    padding: 80px 20px;
+}
+
+.product-not-found h2 {
+    font-size: 1.5rem;
+    margin-bottom: 12px;
+    color: var(--text-primary);
+}
+
+.product-not-found p {
+    color: var(--text-secondary);
+    margin-bottom: 24px;
+}
+
+/* 响应式 */
+@media (max-width: 900px) {
+    .product-detail-container {
+        grid-template-columns: 1fr;
+        gap: 32px;
+    }
+
+    .product-gallery {
+        position: static;
+    }
+
+    .main-image img {
+        height: 300px;
+    }
+
+    .quantity-section {
+        flex-wrap: wrap;
+    }
+
+    .qty-total {
+        width: 100%;
+        margin-left: 0;
+        margin-top: 12px;
+        padding-top: 12px;
+        border-top: 1px solid var(--border-color);
+    }
+}
+
+@media (max-width: 600px) {
+    .action-buttons {
+        flex-direction: column;
+    }
+
+    .service-guarantee {
+        flex-wrap: wrap;
+        gap: 16px;
+    }
+}

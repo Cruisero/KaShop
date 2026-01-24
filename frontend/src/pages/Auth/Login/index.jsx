@@ -1,0 +1,143 @@
+import { useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { FiMail, FiLock, FiEye, FiEyeOff } from 'react-icons/fi'
+import { useAuthStore } from '../../../store/authStore'
+import toast from 'react-hot-toast'
+import './Auth.css'
+
+function Login() {
+    const navigate = useNavigate()
+    const login = useAuthStore((state) => state.login)
+    const [formData, setFormData] = useState({
+        email: '',
+        password: ''
+    })
+    const [showPassword, setShowPassword] = useState(false)
+    const [loading, setLoading] = useState(false)
+
+    const handleChange = (e) => {
+        const { name, value } = e.target
+        setFormData(prev => ({ ...prev, [name]: value }))
+    }
+
+    const handleSubmit = async (e) => {
+        e.preventDefault()
+
+        if (!formData.email || !formData.password) {
+            toast.error('请填写完整信息')
+            return
+        }
+
+        setLoading(true)
+
+        // 模拟登录
+        setTimeout(() => {
+            setLoading(false)
+
+            // 模拟登录成功
+            if (formData.email === 'admin@kashop.com' && formData.password === 'admin123') {
+                login(
+                    { id: '1', email: formData.email, username: 'Admin', role: 'admin' },
+                    'mock-jwt-token'
+                )
+                toast.success('登录成功')
+                navigate('/admin')
+            } else if (formData.password.length >= 6) {
+                login(
+                    { id: '2', email: formData.email, username: formData.email.split('@')[0], role: 'user' },
+                    'mock-jwt-token'
+                )
+                toast.success('登录成功')
+                navigate('/')
+            } else {
+                toast.error('邮箱或密码错误')
+            }
+        }, 800)
+    }
+
+    return (
+        <div className="auth-page">
+            <div className="auth-container">
+                <div className="auth-header">
+                    <h1>欢迎回来</h1>
+                    <p>登录您的 Kashop 账号</p>
+                </div>
+
+                <form className="auth-form" onSubmit={handleSubmit}>
+                    <div className="form-group">
+                        <label>邮箱</label>
+                        <div className="input-wrapper">
+                            <FiMail className="input-icon" />
+                            <input
+                                type="email"
+                                name="email"
+                                className="input with-icon"
+                                placeholder="请输入邮箱"
+                                value={formData.email}
+                                onChange={handleChange}
+                            />
+                        </div>
+                    </div>
+
+                    <div className="form-group">
+                        <label>密码</label>
+                        <div className="input-wrapper">
+                            <FiLock className="input-icon" />
+                            <input
+                                type={showPassword ? 'text' : 'password'}
+                                name="password"
+                                className="input with-icon"
+                                placeholder="请输入密码"
+                                value={formData.password}
+                                onChange={handleChange}
+                            />
+                            <button
+                                type="button"
+                                className="password-toggle"
+                                onClick={() => setShowPassword(!showPassword)}
+                            >
+                                {showPassword ? <FiEyeOff /> : <FiEye />}
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="form-options">
+                        <label className="remember-me">
+                            <input type="checkbox" />
+                            <span>记住我</span>
+                        </label>
+                        <a href="#" className="forgot-password">忘记密码？</a>
+                    </div>
+
+                    <button
+                        type="submit"
+                        className="btn btn-primary btn-lg auth-btn"
+                        disabled={loading}
+                    >
+                        {loading ? '登录中...' : '登录'}
+                    </button>
+                </form>
+
+                <div className="auth-footer">
+                    <p>还没有账号？ <Link to="/register">立即注册</Link></p>
+                </div>
+
+                <div className="auth-divider">
+                    <span>或</span>
+                </div>
+
+                <div className="guest-option">
+                    <Link to="/products" className="btn btn-secondary">
+                        游客购物（无需登录）
+                    </Link>
+                </div>
+
+                <div className="demo-account">
+                    <p>演示账号：admin@kashop.com / admin123</p>
+                </div>
+            </div>
+        </div>
+    )
+}
+
+export default Login
