@@ -1,17 +1,17 @@
-/* Kashop 全局样式 - 现代暗黑风格 */
+/* Kashop 全局样式 - 支持明暗主题切换 */
 
-/* ============ 变量定义 ============ */
+/* ============ 暗黑主题变量 (默认) ============ */
 :root {
-  /* 主色调 */
-  --primary: #6366f1;
-  --primary-light: #818cf8;
-  --primary-dark: #4f46e5;
+  /* 主色调 - 红色系 */
+  --primary: #ef4444;
+  --primary-light: #f87171;
+  --primary-dark: #dc2626;
 
   /* 背景色 */
-  --bg-primary: #0f0f23;
-  --bg-secondary: #1a1a2e;
-  --bg-tertiary: #16213e;
-  --bg-card: rgba(26, 26, 46, 0.8);
+  --bg-primary: #0f172a;
+  --bg-secondary: #1e293b;
+  --bg-tertiary: #1a1f2e;
+  --bg-card: rgba(30, 41, 59, 0.8);
 
   /* 文字色 */
   --text-primary: #f1f5f9;
@@ -19,8 +19,8 @@
   --text-muted: #64748b;
 
   /* 边框 */
-  --border-color: rgba(99, 102, 241, 0.2);
-  --border-glow: rgba(99, 102, 241, 0.5);
+  --border-color: rgba(239, 68, 68, 0.2);
+  --border-glow: rgba(239, 68, 68, 0.5);
 
   /* 状态色 */
   --success: #10b981;
@@ -29,15 +29,15 @@
   --info: #3b82f6;
 
   /* 渐变 */
-  --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  --gradient-dark: linear-gradient(180deg, #0f0f23 0%, #1a1a2e 100%);
-  --gradient-card: linear-gradient(145deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.05) 100%);
+  --gradient-primary: linear-gradient(135deg, #ef4444 0%, #f97316 100%);
+  --gradient-dark: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+  --gradient-card: linear-gradient(145deg, rgba(239, 68, 68, 0.1) 0%, rgba(249, 115, 22, 0.05) 100%);
 
   /* 阴影 */
   --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.3);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
   --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
-  --shadow-glow: 0 0 20px rgba(99, 102, 241, 0.3);
+  --shadow-glow: 0 0 20px rgba(239, 68, 68, 0.3);
 
   /* 圆角 */
   --radius-sm: 8px;
@@ -49,6 +49,47 @@
   --transition-fast: 0.15s ease;
   --transition-normal: 0.3s ease;
   --transition-slow: 0.5s ease;
+
+  /* 主题标识 */
+  --theme-toggle-bg: var(--bg-tertiary);
+  --navbar-bg: rgba(15, 23, 42, 0.95);
+}
+
+/* ============ 浅色主题变量 ============ */
+[data-theme="light"] {
+  /* 主色调保持一致 - 红色系 */
+  --primary: #dc2626;
+  --primary-light: #ef4444;
+  --primary-dark: #b91c1c;
+
+  /* 背景色 - 浅色 */
+  --bg-primary: #f8fafc;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #f1f5f9;
+  --bg-card: rgba(255, 255, 255, 0.9);
+
+  /* 文字色 - 深色 */
+  --text-primary: #1e293b;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+
+  /* 边框 - 浅色 */
+  --border-color: rgba(239, 68, 68, 0.15);
+  --border-glow: rgba(239, 68, 68, 0.4);
+
+  /* 渐变 - 浅色 */
+  --gradient-dark: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%);
+  --gradient-card: linear-gradient(145deg, rgba(239, 68, 68, 0.05) 0%, rgba(249, 115, 22, 0.02) 100%);
+
+  /* 阴影 - 更柔和 */
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+  --shadow-glow: 0 0 20px rgba(239, 68, 68, 0.15);
+
+  /* 主题标识 */
+  --theme-toggle-bg: #e2e8f0;
+  --navbar-bg: rgba(255, 255, 255, 0.95);
 }
 
 /* ============ 重置样式 ============ */
@@ -85,10 +126,18 @@ body::before {
   right: 0;
   bottom: 0;
   background:
-    radial-gradient(ellipse at 20% 20%, rgba(99, 102, 241, 0.15) 0%, transparent 50%),
-    radial-gradient(ellipse at 80% 80%, rgba(139, 92, 246, 0.1) 0%, transparent 50%);
+    radial-gradient(ellipse at 20% 20%, rgba(239, 68, 68, 0.15) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 80%, rgba(249, 115, 22, 0.1) 0%, transparent 50%);
   pointer-events: none;
   z-index: -1;
+  transition: opacity var(--transition-normal);
+}
+
+/* 浅色主题背景动效 */
+[data-theme="light"] body::before {
+  background:
+    radial-gradient(ellipse at 20% 20%, rgba(239, 68, 68, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 80%, rgba(249, 115, 22, 0.05) 0%, transparent 50%);
 }
 
 a {
@@ -191,7 +240,7 @@ select {
 
 .btn-secondary:hover {
   border-color: var(--primary);
-  background: rgba(99, 102, 241, 0.1);
+  background: rgba(239, 68, 68, 0.1);
 }
 
 .btn-success {
@@ -219,7 +268,7 @@ select {
 
 .input:focus {
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2);
 }
 
 .input::placeholder {

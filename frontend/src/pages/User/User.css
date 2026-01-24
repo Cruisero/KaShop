@@ -101,12 +101,12 @@
 }
 
 .user-nav .nav-item:hover {
-    background: rgba(99, 102, 241, 0.1);
+    background: rgba(239, 68, 68, 0.1);
     color: var(--text-primary);
 }
 
 .user-nav .nav-item.active {
-    background: rgba(99, 102, 241, 0.15);
+    background: rgba(239, 68, 68, 0.15);
     color: var(--primary-light);
 }
 
@@ -265,7 +265,7 @@
 }
 
 .filter-btn.active {
-    background: rgba(99, 102, 241, 0.15);
+    background: rgba(239, 68, 68, 0.15);
     border-color: var(--primary);
     color: var(--primary-light);
 }
@@ -333,7 +333,7 @@
 
 .view-cards-btn {
     padding: 6px 12px;
-    background: rgba(99, 102, 241, 0.15);
+    background: rgba(239, 68, 68, 0.15);
     border: none;
     border-radius: var(--radius-sm);
     color: var(--primary-light);

@@ -137,12 +137,12 @@
 }
 
 .payment-option:hover:not(.disabled) {
-    background: rgba(99, 102, 241, 0.1);
+    background: rgba(239, 68, 68, 0.1);
 }
 
 .payment-option.active {
     border-color: var(--primary);
-    background: rgba(99, 102, 241, 0.1);
+    background: rgba(239, 68, 68, 0.1);
 }
 
 .payment-option.disabled {
@@ -269,7 +269,7 @@
 /* 安全提示 */
 .security-tips {
     padding: 12px;
-    background: rgba(99, 102, 241, 0.1);
+    background: rgba(239, 68, 68, 0.1);
     border-radius: var(--radius-sm);
 }
 

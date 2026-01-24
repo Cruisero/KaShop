@@ -171,7 +171,7 @@
 
 .toggle-cards-btn {
     padding: 6px 12px;
-    background: rgba(99, 102, 241, 0.1);
+    background: rgba(239, 68, 68, 0.1);
     border: 1px solid var(--primary);
     border-radius: var(--radius-sm);
     color: var(--primary-light);
@@ -181,7 +181,7 @@
 }
 
 .toggle-cards-btn:hover {
-    background: rgba(99, 102, 241, 0.2);
+    background: rgba(239, 68, 68, 0.2);
 }
 
 .cards-list {

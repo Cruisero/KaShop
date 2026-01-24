@@ -1,13 +1,15 @@
 import { Link, useLocation } from 'react-router-dom'
-import { FiShoppingCart, FiSearch, FiUser } from 'react-icons/fi'
+import { FiShoppingCart, FiSearch, FiUser, FiSun, FiMoon } from 'react-icons/fi'
 import { useCartStore } from '../../../store/cartStore'
 import { useAuthStore } from '../../../store/authStore'
+import { useThemeStore } from '../../../store/themeStore'
 import './Navbar.css'
 
 function Navbar() {
     const location = useLocation()
     const cartItems = useCartStore((state) => state.items)
     const { user, isAuthenticated } = useAuthStore()
+    const { theme, toggleTheme } = useThemeStore()
 
     const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0)
 
@@ -44,6 +46,15 @@ function Navbar() {
 
                 {/* 右侧操作 */}
                 <div className="navbar-actions">
+                    {/* 主题切换 */}
+                    <button
+                        className="nav-icon-btn theme-toggle-btn"
+                        onClick={toggleTheme}
+                        title={theme === 'dark' ? '切换到浅色模式' : '切换到暗黑模式'}
+                    >
+                        {theme === 'dark' ? <FiSun /> : <FiMoon />}
+                    </button>
+
                     {/* 搜索 */}
                     <button className="nav-icon-btn" title="搜索">
                         <FiSearch />

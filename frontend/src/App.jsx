@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import Navbar from './components/common/Navbar'
@@ -13,8 +14,16 @@ import Register from './pages/Auth/Register'
 import UserCenter from './pages/User'
 import AdminDashboard from './pages/Admin/Dashboard'
 import NotFound from './pages/NotFound'
+import { useThemeStore } from './store/themeStore'
 
 function App() {
+    const initTheme = useThemeStore((state) => state.initTheme)
+
+    // 初始化主题
+    useEffect(() => {
+        initTheme()
+    }, [initTheme])
+
     return (
         <Router>
             <div className="app">

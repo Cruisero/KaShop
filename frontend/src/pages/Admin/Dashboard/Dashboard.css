@@ -54,7 +54,7 @@
 }
 
 .sidebar-toggle:hover {
-    background: rgba(99, 102, 241, 0.1);
+    background: rgba(239, 68, 68, 0.1);
     color: var(--primary-light);
 }
 
@@ -77,12 +77,12 @@
 }
 
 .nav-item:hover {
-    background: rgba(99, 102, 241, 0.1);
+    background: rgba(239, 68, 68, 0.1);
     color: var(--text-primary);
 }
 
 .nav-item.active {
-    background: rgba(99, 102, 241, 0.15);
+    background: rgba(239, 68, 68, 0.15);
     color: var(--primary-light);
 }
 
@@ -210,7 +210,7 @@
 }
 
 .stat-icon.orders {
-    background: rgba(99, 102, 241, 0.15);
+    background: rgba(239, 68, 68, 0.15);
     color: var(--primary-light);
 }
 
@@ -413,7 +413,7 @@
 }
 
 .action-btn.cards {
-    background: rgba(99, 102, 241, 0.15);
+    background: rgba(239, 68, 68, 0.15);
     color: var(--primary-light);
 }
 
@@ -480,7 +480,7 @@
 }
 
 .tab-btn.active {
-    background: rgba(99, 102, 241, 0.15);
+    background: rgba(239, 68, 68, 0.15);
     border-color: var(--primary);
     color: var(--primary-light);
 }
@@ -1132,7 +1132,7 @@
 
 .custom-select.open .custom-select-trigger {
     border-color: var(--primary-light);
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
 }
 
 .custom-select-value {
@@ -1202,12 +1202,12 @@
 }
 
 .custom-select-option:hover {
-    background: rgba(99, 102, 241, 0.1);
+    background: rgba(239, 68, 68, 0.1);
     color: var(--text-primary);
 }
 
 .custom-select-option.selected {
-    background: rgba(99, 102, 241, 0.15);
+    background: rgba(239, 68, 68, 0.15);
     color: var(--primary-light);
     font-weight: 500;
 }
