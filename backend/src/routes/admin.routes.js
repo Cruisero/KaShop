@@ -32,4 +32,11 @@ router.get('/users', adminController.getUsers)
 router.get('/settings', adminController.getSettings)
 router.put('/settings', adminController.updateSettings)
 
+// 卡密管理
+router.get('/cards', adminController.getCards)
+router.post('/cards/import', adminController.importCards)
+router.put('/cards/:id', adminController.updateCard)
+router.delete('/cards/:id', adminController.deleteCard)
+router.post('/cards/batch-delete', adminController.deleteCards)
+
 module.exports = router

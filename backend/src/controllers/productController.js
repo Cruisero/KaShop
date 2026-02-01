@@ -6,6 +6,8 @@ exports.getProducts = async (req, res, next) => {
     try {
         const {
             category,
+            categoryId,
+            search,
             status = 'ACTIVE',
             sort = 'createdAt',
             order = 'desc',
@@ -17,8 +19,18 @@ exports.getProducts = async (req, res, next) => {
             status: status.toUpperCase()
         }
 
-        if (category && category !== 'all') {
-            where.categoryId = category
+        // 支持 category 和 categoryId 两种参数名
+        const catId = categoryId || category
+        if (catId && catId !== 'all') {
+            where.categoryId = catId
+        }
+
+        // 搜索功能
+        if (search && search.trim()) {
+            where.OR = [
+                { name: { contains: search.trim() } },
+                { description: { contains: search.trim() } }
+            ]
         }
 
         // 排序配置
@@ -37,6 +49,10 @@ exports.getProducts = async (req, res, next) => {
                 include: {
                     category: {
                         select: { id: true, name: true, icon: true }
+                    },
+                    variants: {
+                        where: { status: 'ACTIVE' },
+                        orderBy: { sortOrder: 'asc' }
                     }
                 },
                 orderBy,
@@ -75,6 +91,10 @@ exports.getHotProducts = async (req, res, next) => {
             include: {
                 category: {
                     select: { id: true, name: true }
+                },
+                variants: {
+                    where: { status: 'ACTIVE' },
+                    orderBy: { sortOrder: 'asc' }
                 }
             }
         })
@@ -102,6 +122,10 @@ exports.getProductById = async (req, res, next) => {
             include: {
                 category: {
                     select: { id: true, name: true, icon: true }
+                },
+                variants: {
+                    where: { status: 'ACTIVE' },
+                    orderBy: { sortOrder: 'asc' }
                 }
             }
         })
@@ -111,12 +135,15 @@ exports.getProductById = async (req, res, next) => {
         }
 
         res.json({
-            product: {
-                ...product,
-                price: parseFloat(product.price),
-                originalPrice: product.originalPrice ? parseFloat(product.originalPrice) : null,
-                tags: product.tags || []
-            }
+            ...product,
+            price: parseFloat(product.price),
+            originalPrice: product.originalPrice ? parseFloat(product.originalPrice) : null,
+            tags: product.tags || [],
+            variants: (product.variants || []).map(v => ({
+                ...v,
+                price: parseFloat(v.price),
+                originalPrice: v.originalPrice ? parseFloat(v.originalPrice) : null
+            }))
         })
     } catch (error) {
         next(error)

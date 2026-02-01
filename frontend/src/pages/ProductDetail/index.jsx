@@ -5,6 +5,18 @@ import { useCartStore } from '../../store/cartStore'
 import toast from 'react-hot-toast'
 import './ProductDetail.css'
 
+// 处理图片 URL，支持不同尺寸 (large, medium, original)
+const getImageUrl = (url, size = 'original') => {
+    if (!url) return '/placeholder.png'
+    if (url.startsWith('http')) return url
+    // 如果是上传的图片，替换尺寸路径
+    if (url.includes('/uploads/products/')) {
+        const newUrl = url.replace(/\/(large|medium|original)\//, `/${size}/`)
+        return `http://localhost:8080${newUrl}`
+    }
+    return `http://localhost:8080${url}`
+}
+
 // 模拟商品数据 (与 Products 页面共享)
 const mockProducts = [
     {
@@ -32,6 +44,12 @@ const mockProducts = [
         stock: 128,
         sold: 2341,
         image: 'https://images.unsplash.com/photo-1574375927938-d5a98e8ffe85?w=800&h=600&fit=crop',
+        images: [
+            'https://images.unsplash.com/photo-1574375927938-d5a98e8ffe85?w=800&h=600&fit=crop',
+            'https://images.unsplash.com/photo-1522869635100-9f4c5e86aa37?w=800&h=600&fit=crop',
+            'https://images.unsplash.com/photo-1611162616305-c69b3fa7fbe0?w=800&h=600&fit=crop',
+            'https://images.unsplash.com/photo-1512149177596-f817c7ef5d4c?w=800&h=600&fit=crop',
+        ],
         tags: ['热销', '4K'],
     },
     {
@@ -171,16 +189,44 @@ function ProductDetail() {
     const [quantity, setQuantity] = useState(1)
     const [product, setProduct] = useState(null)
     const [loading, setLoading] = useState(true)
+    const [activeImageIndex, setActiveImageIndex] = useState(0)
+    const [selectedVariant, setSelectedVariant] = useState(null) // 选中的规格
     const addItem = useCartStore((state) => state.addItem)
 
     useEffect(() => {
-        // 模拟加载商品
+        // 从 API 获取商品详情
         setLoading(true)
-        setTimeout(() => {
-            const found = mockProducts.find(p => p.id === id)
-            setProduct(found || null)
-            setLoading(false)
-        }, 300)
+        fetch(`http://localhost:8080/api/products/${id}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data && data.id) {
+                    // 转换数据格式
+                    const formattedProduct = {
+                        id: data.id,
+                        name: data.name,
+                        description: data.description,
+                        fullDescription: data.fullDescription || data.description,
+                        price: parseFloat(data.price),
+                        originalPrice: data.originalPrice ? parseFloat(data.originalPrice) : null,
+                        category: data.categoryId,
+                        stock: data.stock,
+                        sold: data.soldCount || 0,
+                        image: data.image || 'https://via.placeholder.com/800x600?text=No+Image',
+                        images: data.images || (data.image ? [data.image] : []),
+                        tags: data.tags || [],
+                        variants: data.variants || [],
+                    }
+                    setProduct(formattedProduct)
+                } else {
+                    setProduct(null)
+                }
+                setLoading(false)
+            })
+            .catch(err => {
+                console.error('获取商品详情失败:', err)
+                setProduct(null)
+                setLoading(false)
+            })
     }, [id])
 
     const handleQuantityChange = (delta) => {
@@ -235,10 +281,16 @@ function ProductDetail() {
             </button>
 
             <div className="product-detail-container">
-                {/* 左侧图片 */}
+                {/* 左侧图片画廊 */}
                 <div className="product-gallery">
+                    {/* 主图区域 */}
                     <div className="main-image">
-                        <img src={product.image} alt={product.name} />
+                        <img
+                            src={getImageUrl((product.images && product.images.length > 0)
+                                ? product.images[activeImageIndex]
+                                : product.image)}
+                            alt={product.name}
+                        />
                         {product.tags.length > 0 && (
                             <div className="detail-tags">
                                 {product.tags.map((tag, index) => (
@@ -246,7 +298,43 @@ function ProductDetail() {
                                 ))}
                             </div>
                         )}
+                        {/* 左右切换按钮 */}
+                        {product.images && product.images.length > 1 && (
+                            <>
+                                <button
+                                    className="slider-nav prev"
+                                    onClick={() => setActiveImageIndex(prev =>
+                                        prev === 0 ? product.images.length - 1 : prev - 1
+                                    )}
+                                >
+                                    ‹
+                                </button>
+                                <button
+                                    className="slider-nav next"
+                                    onClick={() => setActiveImageIndex(prev =>
+                                        prev === product.images.length - 1 ? 0 : prev + 1
+                                    )}
+                                >
+                                    ›
+                                </button>
+                            </>
+                        )}
                     </div>
+
+                    {/* 缩略图导航 */}
+                    {product.images && product.images.length > 1 && (
+                        <div className="thumbnail-nav">
+                            {product.images.map((img, index) => (
+                                <button
+                                    key={index}
+                                    className={`thumbnail-item ${activeImageIndex === index ? 'active' : ''}`}
+                                    onClick={() => setActiveImageIndex(index)}
+                                >
+                                    <img src={getImageUrl(img, 'medium')} alt={`缩略图 ${index + 1}`} />
+                                </button>
+                            ))}
+                        </div>
+                    )}
                 </div>
 
                 {/* 右侧信息 */}
@@ -254,21 +342,53 @@ function ProductDetail() {
                     <h1 className="detail-title">{product.name}</h1>
                     <p className="detail-desc">{product.description}</p>
 
+                    {/* 规格选择 */}
+                    {product.variants && product.variants.length > 0 && (
+                        <div className="variant-selector">
+                            <span className="variant-label">规格</span>
+                            <div className="variant-options">
+                                {/* 默认规格 - 商品基础价格 */}
+                                <button
+                                    className={`variant-option ${selectedVariant === null ? 'active' : ''}`}
+                                    onClick={() => setSelectedVariant(null)}
+                                >
+                                    默认
+                                    <span className="variant-price">¥{product.price.toFixed(2)}</span>
+                                </button>
+                                {/* 其他规格 */}
+                                {product.variants.map((variant) => (
+                                    <button
+                                        key={variant.id}
+                                        className={`variant-option ${selectedVariant?.id === variant.id ? 'active' : ''}`}
+                                        onClick={() => setSelectedVariant(variant)}
+                                    >
+                                        {variant.name}
+                                        <span className="variant-price">¥{variant.price.toFixed(2)}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
                     {/* 价格区域 */}
                     <div className="price-section">
                         <div className="price-row">
                             <span className="price-label">价格</span>
-                            <span className="price-value">¥{product.price.toFixed(2)}</span>
-                            {product.originalPrice > product.price && (
+                            <span className="price-value">
+                                ¥{(selectedVariant?.price || product.price).toFixed(2)}
+                            </span>
+                            {(selectedVariant?.originalPrice || product.originalPrice) > (selectedVariant?.price || product.price) && (
                                 <>
-                                    <span className="price-original">¥{product.originalPrice.toFixed(2)}</span>
+                                    <span className="price-original">
+                                        ¥{(selectedVariant?.originalPrice || product.originalPrice).toFixed(2)}
+                                    </span>
                                     <span className="discount-badge">-{discount}%</span>
                                 </>
                             )}
                         </div>
                         <div className="sales-row">
                             <span>已售 {product.sold}</span>
-                            <span>库存 {product.stock}</span>
+                            <span>库存 {selectedVariant?.stock ?? product.stock}</span>
                         </div>
                     </div>
 

@@ -69,8 +69,27 @@ model Product {
   category      Category? @relation(fields: [categoryId], references: [id])
   cards         Card[]
   orders        Order[]
+  variants      ProductVariant[]
   
   @@map("products")
+}
+
+// 商品规格表
+model ProductVariant {
+  id            String    @id @default(uuid())
+  productId     String    @map("product_id")
+  name          String    // 规格名称，如"月卡"、"季卡"、"年卡"
+  price         Decimal   @db.Decimal(10, 2)
+  originalPrice Decimal?  @db.Decimal(10, 2) @map("original_price")
+  stock         Int       @default(0)
+  sortOrder     Int       @default(0) @map("sort_order")
+  status        Status    @default(ACTIVE)
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  
+  product       Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  
+  @@map("product_variants")
 }
 
 enum Status {
@@ -108,6 +127,8 @@ model Order {
   email         String
   productId     String      @map("product_id")
   productName   String      @map("product_name")
+  variantId     String?     @map("variant_id")
+  variantName   String?     @map("variant_name")
   quantity      Int         @default(1)
   unitPrice     Decimal     @db.Decimal(10, 2) @map("unit_price")
   totalAmount   Decimal     @db.Decimal(10, 2) @map("total_amount")

@@ -1,7 +1,7 @@
 # 开发环境 Dockerfile
 FROM node:20-alpine
 
-# 安装 OpenSSL 用于 Prisma
+# 安装 Prisma 所需的 OpenSSL
 RUN apk add --no-cache openssl
 
 WORKDIR /app
@@ -10,8 +10,8 @@ WORKDIR /app
 COPY package*.json ./
 COPY prisma ./prisma/
 
-# 安装依赖
-RUN npm install
+# 安装依赖 (使用 libc+musl 平台预编译的 sharp)
+RUN npm install --platform=linuxmusl --arch=x64 --libc=musl
 
 # 生成 Prisma 客户端
 RUN npx prisma generate

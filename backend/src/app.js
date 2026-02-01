@@ -9,8 +9,11 @@ const logger = require('./utils/logger')
 
 const app = express()
 
-// 安全中间件
-app.use(helmet())
+// 安全中间件 (配置允许跨域图片)
+app.use(helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+    contentSecurityPolicy: false
+}))
 
 // CORS 配置
 app.use(cors({

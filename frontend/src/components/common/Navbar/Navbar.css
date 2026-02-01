@@ -30,15 +30,294 @@
     text-decoration: none;
 }
 
-.logo-icon {
-    font-size: 1.8rem;
+.logo-image {
+    height: 32px;
+    width: auto;
+    object-fit: contain;
 }
 
-.logo-text {
+/* 搜索栏 */
+.navbar-search {
+    flex: 1;
+    max-width: 500px;
+    margin: 0 24px;
+    position: relative;
+}
+
+.search-input-wrapper {
+    display: flex;
+    align-items: center;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+    transition: all var(--transition-fast);
+}
+
+.search-input-wrapper:focus-within,
+.search-input-wrapper.focused {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+.search-icon {
+    margin-left: 16px;
+    font-size: 1.1rem;
+    color: var(--text-tertiary);
+    flex-shrink: 0;
+}
+
+.search-input {
+    flex: 1;
+    padding: 10px 12px;
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    background: transparent;
+    border: none;
+    outline: none;
+}
+
+.search-input::placeholder {
+    color: var(--text-tertiary);
+}
+
+.search-btn {
+    padding: 10px 20px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: white;
     background: var(--gradient-primary);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    border: none;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.search-btn:hover {
+    opacity: 0.9;
+}
+
+/* 搜索下拉框 */
+.search-dropdown {
+    position: fixed;
+    top: 70px;
+    left: 0;
+    right: 0;
+    height: 140px;
+    width: 100%;
+    max-width: 100%;
+    background: var(--bg-primary);
+    border: none;
+    border-top: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-color);
+    border-radius: 15px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.05), 0 8px 20px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+    z-index: 1000;
+    animation: dropdownSlideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    backdrop-filter: blur(20px);
+}
+
+@keyframes dropdownSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-12px) scale(0.98);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.dropdown-section {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px 24px;
+}
+
+.dropdown-section+.dropdown-section {
+    border-top: 1px solid var(--border-color);
+}
+
+.dropdown-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 14px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-tertiary);
+}
+
+.dropdown-icon {
+    font-size: 0.85rem;
+    opacity: 0.7;
+}
+
+.dropdown-icon.hot {
+    color: var(--primary);
+    opacity: 1;
+}
+
+.clear-history-btn {
+    margin-left: auto;
+    padding: 4px 12px;
+    font-size: 0.7rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    color: var(--text-tertiary);
+    background: transparent;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.clear-history-btn:hover {
+    color: var(--primary);
+    background: rgba(239, 68, 68, 0.08);
+}
+
+/* 关键词标签 */
+.keyword-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.keyword-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    background: var(--bg-color);
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.keyword-tag:hover {
+    color: var(--primary);
+    background: rgba(239, 68, 68, 0.1);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.15);
+}
+
+.keyword-tag:active {
+    transform: translateY(0);
+}
+
+.hot-tag {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.12) 0%, rgba(239, 68, 68, 0.06) 100%);
+    color: var(--text-primary);
+}
+
+.hot-tag:hover {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(239, 68, 68, 0.1) 100%);
+}
+
+.history-tag {
+    background: var(--bg-color);
+}
+
+.remove-tag-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    font-size: 0.7rem;
+    color: var(--text-tertiary);
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    margin-left: 2px;
+}
+
+.remove-tag-btn:hover {
+    color: white;
+    background: var(--error);
+    transform: scale(1.1);
+}
+
+/* 搜索建议列表 */
+.suggestion-list {
+    margin: -8px -20px -16px -20px;
+}
+
+.suggestion-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-radius: 15px;
+    padding: 14px 20px;
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    border-left: 3px solid transparent;
+}
+
+.suggestion-item:hover {
+    background: linear-gradient(90deg, rgba(239, 68, 68, 0.08) 0%, transparent 100%);
+    border-left-color: var(--primary);
+}
+
+.suggestion-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    font-size: 0.9rem;
+    color: var(--text-tertiary);
+    background: var(--bg-color);
+    border-radius: 8px;
+    flex-shrink: 0;
+}
+
+.suggestion-item:hover .suggestion-icon {
+    color: var(--primary);
+    background: rgba(239, 68, 68, 0.1);
+}
+
+.suggestion-item mark {
+    color: var(--primary);
+    background: rgba(239, 68, 68, 0.15);
+    padding: 1px 4px;
+    border-radius: 4px;
+    font-weight: 600;
+}
+
+/* 无结果提示 */
+.no-suggestions {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 32px 20px;
+    text-align: center;
+}
+
+.no-suggestions svg {
+    font-size: 1.5rem;
+    color: var(--text-tertiary);
+    opacity: 0.5;
+}
+
+.no-suggestions span {
+    font-size: 0.9rem;
+    color: var(--text-tertiary);
 }
 
 /* 导航链接 */
@@ -185,6 +464,19 @@
 @media (max-width: 768px) {
     .navbar-links {
         display: none;
+    }
+
+    .navbar-search {
+        max-width: none;
+        margin: 0 12px;
+    }
+
+    .search-btn {
+        padding: 10px 12px;
+    }
+
+    .dropdown-section {
+        padding: 16px;
     }
 
     .user-name {

@@ -80,7 +80,10 @@ exports.getProducts = async (req, res, next) => {
                 where,
                 include: {
                     category: { select: { name: true } },
-                    _count: { select: { cards: { where: { status: 'AVAILABLE' } } } }
+                    _count: { select: { cards: { where: { status: 'AVAILABLE' } } } },
+                    variants: {
+                        orderBy: { sortOrder: 'asc' }
+                    }
                 },
                 orderBy: { createdAt: 'desc' },
                 skip: (page - 1) * pageSize,
@@ -94,7 +97,12 @@ exports.getProducts = async (req, res, next) => {
                 ...p,
                 price: parseFloat(p.price),
                 originalPrice: p.originalPrice ? parseFloat(p.originalPrice) : null,
-                availableCards: p._count.cards
+                availableCards: p._count.cards,
+                variants: (p.variants || []).map(v => ({
+                    ...v,
+                    price: parseFloat(v.price),
+                    originalPrice: v.originalPrice ? parseFloat(v.originalPrice) : null
+                }))
             })),
             total,
             page: parseInt(page),
@@ -108,19 +116,48 @@ exports.getProducts = async (req, res, next) => {
 // 商品管理 - 创建
 exports.createProduct = async (req, res, next) => {
     try {
-        const { name, description, fullDescription, price, originalPrice, categoryId, image, tags } = req.body
+        const { name, description, fullDescription, price, originalPrice, categoryId, image, images, tags, stock, variants } = req.body
+
+        // 构建数据对象，只包含有值的字段
+        const productData = {
+            name,
+            description,
+            fullDescription,
+            price,
+            originalPrice,
+            image,
+            images: images || [],
+            stock: stock || 0,
+            tags: tags || [],
+            status: 'ACTIVE'
+        }
+
+        // 只有当 categoryId 有效时才添加
+        if (categoryId && categoryId !== '' && categoryId !== 'null') {
+            productData.categoryId = categoryId
+        }
+
+        // 如果有规格数据，使用嵌套创建
+        if (variants && variants.length > 0) {
+            const validVariants = variants.filter(v => v.name && v.price)
+            if (validVariants.length > 0) {
+                productData.variants = {
+                    create: validVariants.map((v, index) => ({
+                        name: v.name,
+                        price: parseFloat(v.price) || 0,
+                        originalPrice: v.originalPrice ? parseFloat(v.originalPrice) : null,
+                        stock: parseInt(v.stock) || 0,
+                        sortOrder: index,
+                        status: 'ACTIVE'
+                    }))
+                }
+            }
+        }
 
         const product = await prisma.product.create({
-            data: {
-                name,
-                description,
-                fullDescription,
-                price,
-                originalPrice,
-                categoryId,
-                image,
-                tags: tags || [],
-                status: 'ACTIVE'
+            data: productData,
+            include: {
+                variants: true
             }
         })
 
@@ -134,21 +171,68 @@ exports.createProduct = async (req, res, next) => {
 exports.updateProduct = async (req, res, next) => {
     try {
         const { id } = req.params
-        const { name, description, fullDescription, price, originalPrice, categoryId, image, tags, status } = req.body
+        const { name, description, fullDescription, price, originalPrice, categoryId, image, images, tags, status, stock, variants } = req.body
 
-        const product = await prisma.product.update({
-            where: { id },
-            data: {
-                name,
-                description,
-                fullDescription,
-                price,
-                originalPrice,
-                categoryId,
-                image,
-                tags,
-                status: status?.toUpperCase()
+        // 构建更新数据对象
+        const updateData = {
+            name,
+            description,
+            fullDescription,
+            price,
+            originalPrice,
+            image,
+            images: images || [],
+            stock,
+            tags,
+            status: status?.toUpperCase()
+        }
+
+        // 只有当 categoryId 有效时才更新，否则设置为 null
+        if (categoryId && categoryId !== '' && categoryId !== 'null') {
+            updateData.categoryId = categoryId
+        } else {
+            updateData.categoryId = null
+        }
+
+        // 使用事务处理规格更新
+        const product = await prisma.$transaction(async (tx) => {
+            // 更新商品基本信息
+            const updatedProduct = await tx.product.update({
+                where: { id },
+                data: updateData
+            })
+
+            // 如果传入了 variants 数组，先删除旧规格再创建新规格
+            if (variants !== undefined) {
+                // 删除旧规格
+                await tx.productVariant.deleteMany({
+                    where: { productId: id }
+                })
+
+                // 创建新规格
+                if (variants && variants.length > 0) {
+                    const validVariants = variants.filter(v => v.name && v.price)
+                    if (validVariants.length > 0) {
+                        await tx.productVariant.createMany({
+                            data: validVariants.map((v, index) => ({
+                                productId: id,
+                                name: v.name,
+                                price: parseFloat(v.price) || 0,
+                                originalPrice: v.originalPrice ? parseFloat(v.originalPrice) : null,
+                                stock: parseInt(v.stock) || 0,
+                                sortOrder: index,
+                                status: 'ACTIVE'
+                            }))
+                        })
+                    }
+                }
             }
+
+            // 返回包含规格的商品数据
+            return tx.product.findUnique({
+                where: { id },
+                include: { variants: true }
+            })
         })
 
         res.json({ message: '商品更新成功', product })
@@ -178,7 +262,18 @@ exports.getCategories = async (req, res, next) => {
             include: { _count: { select: { products: true } } }
         })
 
-        res.json({ categories })
+        // 转换格式，添加 productCount 字段
+        const formattedCategories = categories.map(cat => ({
+            id: cat.id,
+            name: cat.name,
+            description: cat.description,
+            icon: cat.icon,
+            status: cat.status,
+            sortOrder: cat.sortOrder,
+            productCount: cat._count?.products || 0
+        }))
+
+        res.json({ categories: formattedCategories })
     } catch (error) {
         next(error)
     }
@@ -337,6 +432,180 @@ exports.updateSettings = async (req, res, next) => {
         }
 
         res.json({ message: '设置更新成功' })
+    } catch (error) {
+        next(error)
+    }
+}
+
+// ==================== 卡密管理 ====================
+
+// 获取卡密列表
+exports.getCards = async (req, res, next) => {
+    try {
+        const { productId, status, page = 1, pageSize = 20 } = req.query
+
+        const where = {}
+        if (productId) where.productId = productId
+        if (status) where.status = status.toUpperCase()
+
+        const [cards, total] = await Promise.all([
+            prisma.card.findMany({
+                where,
+                include: {
+                    product: { select: { id: true, name: true } },
+                    order: { select: { orderNo: true } }
+                },
+                orderBy: { createdAt: 'desc' },
+                skip: (page - 1) * pageSize,
+                take: parseInt(pageSize)
+            }),
+            prisma.card.count({ where })
+        ])
+
+        res.json({
+            cards,
+            total,
+            page: parseInt(page),
+            pageSize: parseInt(pageSize),
+            totalPages: Math.ceil(total / pageSize)
+        })
+    } catch (error) {
+        next(error)
+    }
+}
+
+// 批量导入卡密
+exports.importCards = async (req, res, next) => {
+    try {
+        const { productId, cards } = req.body
+
+        if (!productId) {
+            return res.status(400).json({ error: '请选择商品' })
+        }
+
+        if (!cards || !Array.isArray(cards) || cards.length === 0) {
+            return res.status(400).json({ error: '请提供卡密数据' })
+        }
+
+        // 过滤空行并去重
+        const uniqueCards = [...new Set(cards.filter(c => c && c.trim()))]
+
+        if (uniqueCards.length === 0) {
+            return res.status(400).json({ error: '没有有效的卡密数据' })
+        }
+
+        // 批量创建
+        const result = await prisma.card.createMany({
+            data: uniqueCards.map(content => ({
+                productId,
+                content: content.trim(),
+                status: 'AVAILABLE'
+            })),
+            skipDuplicates: false
+        })
+
+        // 更新商品库存
+        await prisma.product.update({
+            where: { id: productId },
+            data: { stock: { increment: result.count } }
+        })
+
+        res.json({
+            message: `成功导入 ${result.count} 个卡密`,
+            count: result.count
+        })
+    } catch (error) {
+        next(error)
+    }
+}
+
+// 删除单个卡密
+exports.deleteCard = async (req, res, next) => {
+    try {
+        const { id } = req.params
+
+        const card = await prisma.card.findUnique({ where: { id } })
+        if (!card) {
+            return res.status(404).json({ error: '卡密不存在' })
+        }
+
+        if (card.status === 'SOLD') {
+            return res.status(400).json({ error: '已售出的卡密不能删除' })
+        }
+
+        await prisma.card.delete({ where: { id } })
+
+        // 减少商品库存
+        await prisma.product.update({
+            where: { id: card.productId },
+            data: { stock: { decrement: 1 } }
+        })
+
+        res.json({ message: '卡密删除成功' })
+    } catch (error) {
+        next(error)
+    }
+}
+
+// 批量删除卡密
+exports.deleteCards = async (req, res, next) => {
+    try {
+        const { ids, productId } = req.body
+
+        if (!ids || !Array.isArray(ids) || ids.length === 0) {
+            return res.status(400).json({ error: '请选择要删除的卡密' })
+        }
+
+        // 只能删除可用状态的卡密
+        const result = await prisma.card.deleteMany({
+            where: {
+                id: { in: ids },
+                status: 'AVAILABLE'
+            }
+        })
+
+        // 更新商品库存
+        if (productId && result.count > 0) {
+            await prisma.product.update({
+                where: { id: productId },
+                data: { stock: { decrement: result.count } }
+            })
+        }
+
+        res.json({
+            message: `成功删除 ${result.count} 个卡密`,
+            count: result.count
+        })
+    } catch (error) {
+        next(error)
+    }
+}
+
+// 更新单个卡密
+exports.updateCard = async (req, res, next) => {
+    try {
+        const { id } = req.params
+        const { content } = req.body
+
+        if (!content || !content.trim()) {
+            return res.status(400).json({ error: '卡密内容不能为空' })
+        }
+
+        const card = await prisma.card.findUnique({ where: { id } })
+        if (!card) {
+            return res.status(404).json({ error: '卡密不存在' })
+        }
+
+        if (card.status === 'SOLD') {
+            return res.status(400).json({ error: '已售出的卡密不能编辑' })
+        }
+
+        const updatedCard = await prisma.card.update({
+            where: { id },
+            data: { content: content.trim() }
+        })
+
+        res.json({ message: '卡密更新成功', card: updatedCard })
     } catch (error) {
         next(error)
     }

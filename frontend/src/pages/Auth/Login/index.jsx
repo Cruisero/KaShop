@@ -5,6 +5,8 @@ import { useAuthStore } from '../../../store/authStore'
 import toast from 'react-hot-toast'
 import './Auth.css'
 
+const API_BASE = 'http://localhost:8080/api'
+
 function Login() {
     const navigate = useNavigate()
     const login = useAuthStore((state) => state.login)
@@ -30,29 +32,39 @@ function Login() {
 
         setLoading(true)
 
-        // 模拟登录
-        setTimeout(() => {
-            setLoading(false)
+        try {
+            const response = await fetch(`${API_BASE}/auth/login`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    email: formData.email,
+                    password: formData.password
+                })
+            })
 
-            // 模拟登录成功
-            if (formData.email === 'admin@kashop.com' && formData.password === 'admin123') {
-                login(
-                    { id: '1', email: formData.email, username: 'Admin', role: 'admin' },
-                    'mock-jwt-token'
-                )
-                toast.success('登录成功')
-                navigate('/admin')
-            } else if (formData.password.length >= 6) {
-                login(
-                    { id: '2', email: formData.email, username: formData.email.split('@')[0], role: 'user' },
-                    'mock-jwt-token'
-                )
-                toast.success('登录成功')
-                navigate('/')
-            } else {
-                toast.error('邮箱或密码错误')
+            const data = await response.json()
+
+            if (!response.ok) {
+                throw new Error(data.error || '登录失败')
             }
-        }, 800)
+
+            // 使用真实的 token 和用户信息
+            login(data.user, data.token)
+            toast.success('登录成功')
+
+            // 根据角色跳转
+            if (data.user.role === 'admin') {
+                navigate('/admin')
+            } else {
+                navigate('/')
+            }
+        } catch (error) {
+            toast.error(error.message || '邮箱或密码错误')
+        } finally {
+            setLoading(false)
+        }
     }
 
     return (
