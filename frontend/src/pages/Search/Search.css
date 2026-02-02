@@ -2,7 +2,7 @@
 .search-page {
     max-width: 1400px;
     margin: 0 auto;
-    padding: 30px 24px;
+    padding: 0;
 }
 
 /* 搜索头部 */
@@ -290,7 +290,7 @@
 /* 响应式 */
 @media (max-width: 768px) {
     .search-page {
-        padding: 20px 16px;
+        padding: 0;
     }
 
     .search-header h1 {
@@ -298,13 +298,85 @@
     }
 
     .search-toolbar {
-        flex-direction: column;
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
         gap: 12px;
-        align-items: flex-start;
+        padding: 12px 15px;
+    }
+
+    .results-count {
+        font-size: 0.85rem;
+    }
+
+    .sort-options {
+        gap: 6px;
+    }
+
+    .sort-label {
+        display: none;
+    }
+
+    .sort-select {
+        min-width: 90px;
+        font-size: 0.85rem;
+        padding: 6px 10px;
     }
 
     .search-results-grid {
-        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-        gap: 16px;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+
+    .search-page .product-image {
+        height: 140px;
+        aspect-ratio: auto;
+    }
+
+    .search-page .product-info {
+        padding: 12px;
+    }
+
+    .search-page .product-name {
+        font-size: 0.9rem;
+        -webkit-line-clamp: 2;
+    }
+
+    .search-page .product-desc {
+        display: none;
+    }
+
+    .search-page .product-meta {
+        font-size: 0.75rem;
+        gap: 8px;
+        margin-bottom: 8px;
+    }
+
+    .search-page .price-current {
+        font-size: 1.1rem;
+    }
+
+    .search-page .add-cart-btn {
+        width: 32px;
+        height: 32px;
+        font-size: 0.9rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .search-page .product-image {
+        height: 120px;
+    }
+
+    .search-page .product-name {
+        font-size: 0.85rem;
+    }
+
+    .search-page .price-current {
+        font-size: 1rem;
+    }
+
+    .search-page .product-meta {
+        display: none;
     }
 }

@@ -176,3 +176,48 @@ function formatOrder(order) {
         cards: order.cards || []
     }
 }
+
+// 获取当前用户订单列表
+exports.getUserOrders = async (req, res, next) => {
+    try {
+        if (!req.user) {
+            return res.status(401).json({ error: '请先登录' })
+        }
+
+        const { status } = req.query
+
+        const where = { userId: req.user.id }
+        if (status && status !== 'all') {
+            where.status = status.toUpperCase()
+        }
+
+        const orders = await prisma.order.findMany({
+            where,
+            include: {
+                product: {
+                    select: { id: true, name: true, image: true }
+                },
+                cards: {
+                    where: { status: 'USED' },
+                    select: { content: true }
+                }
+            },
+            orderBy: { createdAt: 'desc' }
+        })
+
+        res.json({
+            orders: orders.map(order => ({
+                orderNo: order.orderNo,
+                productName: order.productName,
+                productImage: order.product?.image || '',
+                quantity: order.quantity,
+                totalAmount: parseFloat(order.totalAmount),
+                status: order.status.toLowerCase(),
+                createdAt: order.createdAt,
+                cards: order.cards.map(c => c.content)
+            }))
+        })
+    } catch (error) {
+        next(error)
+    }
+}

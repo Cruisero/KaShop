@@ -1,43 +1,9 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom'
 import { FiUser, FiPackage, FiLock, FiLogOut, FiMail, FiCalendar, FiCopy, FiEye, FiEyeOff } from 'react-icons/fi'
 import { useAuthStore } from '../../store/authStore'
 import toast from 'react-hot-toast'
 import './User.css'
-
-// 模拟订单数据
-const mockOrders = [
-    {
-        orderNo: 'KA202401230001',
-        productName: 'Netflix 高级会员月卡',
-        productImage: 'https://images.unsplash.com/photo-1574375927938-d5a98e8ffe85?w=100&h=80&fit=crop',
-        quantity: 1,
-        totalAmount: 49.90,
-        status: 'completed',
-        createdAt: '2024-01-23 14:32:15',
-        cards: ['账号: netflix_user@email.com\n密码: Netflix2024#Secure']
-    },
-    {
-        orderNo: 'KA202401220002',
-        productName: 'ChatGPT Plus 月卡',
-        productImage: 'https://images.unsplash.com/photo-1677442136019-21780ecad995?w=100&h=80&fit=crop',
-        quantity: 1,
-        totalAmount: 149.00,
-        status: 'completed',
-        createdAt: '2024-01-22 10:15:30',
-        cards: ['账号: chatgpt_user@email.com\n密码: GPT4Plus2024!']
-    },
-    {
-        orderNo: 'KA202401210003',
-        productName: 'Spotify Premium 月卡',
-        productImage: 'https://images.unsplash.com/photo-1614680376593-902f74cf0d41?w=100&h=80&fit=crop',
-        quantity: 2,
-        totalAmount: 39.80,
-        status: 'pending',
-        createdAt: '2024-01-21 16:45:00',
-        cards: []
-    }
-]
 
 // 侧边菜单
 const menuItems = [
@@ -48,11 +14,70 @@ const menuItems = [
 
 // 个人信息页
 function ProfilePage() {
-    const { user } = useAuthStore()
+    const { user, token } = useAuthStore()
+    const [resending, setResending] = useState(false)
+    const [stats, setStats] = useState({ total: 0, spent: 0, completed: 0 })
+
+    useEffect(() => {
+        const fetchStats = async () => {
+            try {
+                const res = await fetch('/api/orders/my-orders', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                })
+                const data = await res.json()
+                const orders = data.orders || []
+                setStats({
+                    total: orders.length,
+                    spent: orders.reduce((sum, o) => sum + o.totalAmount, 0),
+                    completed: orders.filter(o => o.status === 'completed').length
+                })
+            } catch (error) {
+                console.error('获取统计失败:', error)
+            }
+        }
+        if (token) fetchStats()
+    }, [token])
+
+    const handleResendVerification = async () => {
+        setResending(true)
+        try {
+            const res = await fetch('/api/auth/resend-verification', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            })
+            const data = await res.json()
+            if (res.ok) {
+                toast.success(data.message)
+            } else {
+                toast.error(data.error)
+            }
+        } catch (error) {
+            toast.error('发送失败，请稍后重试')
+        } finally {
+            setResending(false)
+        }
+    }
 
     return (
         <div className="profile-page">
             <h2>个人信息</h2>
+
+            {/* 邮箱未验证提示 */}
+            {user && !user.emailVerified && user.role !== 'ADMIN' && (
+                <div className="email-verify-alert">
+                    <div className="alert-content">
+                        <span>⚠️ 您的邮箱尚未验证</span>
+                        <p>请查收验证邮件并点击链接完成验证，以确保账户安全</p>
+                    </div>
+                    <button
+                        className="btn btn-warning"
+                        onClick={handleResendVerification}
+                        disabled={resending}
+                    >
+                        {resending ? '发送中...' : '重新发送验证邮件'}
+                    </button>
+                </div>
+            )}
 
             <div className="profile-card">
                 <div className="profile-avatar">
@@ -74,7 +99,16 @@ function ProfilePage() {
                     <div className="info-row">
                         <FiMail />
                         <span className="info-label">邮箱</span>
-                        <span className="info-value">{user?.email || '未绑定'}</span>
+                        <span className="info-value">
+                            {user?.email || '未绑定'}
+                            {user?.role !== 'ADMIN' && (
+                                user?.emailVerified ? (
+                                    <span className="verified-badge">✓ 已验证</span>
+                                ) : (
+                                    <span className="unverified-badge">未验证</span>
+                                )
+                            )}
+                        </span>
                     </div>
                     <div className="info-row">
                         <FiCalendar />
@@ -86,18 +120,18 @@ function ProfilePage() {
 
             <div className="stats-cards">
                 <div className="stat-card">
-                    <span className="stat-value">{mockOrders.length}</span>
+                    <span className="stat-value">{stats.total}</span>
                     <span className="stat-label">总订单</span>
                 </div>
                 <div className="stat-card">
                     <span className="stat-value">
-                        ¥{mockOrders.reduce((sum, o) => sum + o.totalAmount, 0).toFixed(2)}
+                        ¥{stats.spent.toFixed(2)}
                     </span>
                     <span className="stat-label">总消费</span>
                 </div>
                 <div className="stat-card">
                     <span className="stat-value">
-                        {mockOrders.filter(o => o.status === 'completed').length}
+                        {stats.completed}
                     </span>
                     <span className="stat-label">已完成</span>
                 </div>
@@ -108,12 +142,33 @@ function ProfilePage() {
 
 // 我的订单页
 function OrdersPage() {
+    const { token } = useAuthStore()
+    const [orders, setOrders] = useState([])
+    const [loading, setLoading] = useState(true)
     const [expandedOrder, setExpandedOrder] = useState(null)
     const [filter, setFilter] = useState('all')
 
-    const filteredOrders = filter === 'all'
-        ? mockOrders
-        : mockOrders.filter(o => o.status === filter)
+    useEffect(() => {
+        fetchOrders()
+    }, [filter])
+
+    const fetchOrders = async () => {
+        setLoading(true)
+        try {
+            const url = filter === 'all'
+                ? '/api/orders/my-orders'
+                : `/api/orders/my-orders?status=${filter}`
+            const res = await fetch(url, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            })
+            const data = await res.json()
+            setOrders(data.orders || [])
+        } catch (error) {
+            console.error('获取订单失败:', error)
+        } finally {
+            setLoading(false)
+        }
+    }
 
     const copyToClipboard = (text) => {
         navigator.clipboard.writeText(text).then(() => {
@@ -155,21 +210,30 @@ function OrdersPage() {
             </div>
 
             <div className="orders-list">
-                {filteredOrders.map(order => (
+                {loading ? (
+                    <div className="empty-orders">
+                        <p>加载中...</p>
+                    </div>
+                ) : orders.length === 0 ? (
+                    <div className="empty-orders">
+                        <FiPackage />
+                        <p>暂无订单</p>
+                    </div>
+                ) : orders.map(order => (
                     <div key={order.orderNo} className="order-item">
                         <div className="order-main">
-                            <img src={order.productImage} alt={order.productName} />
+                            <img src={order.productImage || 'https://via.placeholder.com/100x80'} alt={order.productName} />
                             <div className="order-info">
                                 <h4>{order.productName}</h4>
                                 <p className="order-no">订单号: {order.orderNo}</p>
-                                <p className="order-time">{order.createdAt}</p>
+                                <p className="order-time">{new Date(order.createdAt).toLocaleString()}</p>
                             </div>
                             <div className="order-right">
-                                <span className={`status-badge ${statusMap[order.status].class}`}>
-                                    {statusMap[order.status].label}
+                                <span className={`status-badge ${statusMap[order.status]?.class || ''}`}>
+                                    {statusMap[order.status]?.label || order.status}
                                 </span>
                                 <span className="order-amount">¥{order.totalAmount.toFixed(2)}</span>
-                                {order.status === 'completed' && order.cards.length > 0 && (
+                                {order.status === 'completed' && order.cards?.length > 0 && (
                                     <button
                                         className="view-cards-btn"
                                         onClick={() => setExpandedOrder(
@@ -199,13 +263,6 @@ function OrdersPage() {
                         )}
                     </div>
                 ))}
-
-                {filteredOrders.length === 0 && (
-                    <div className="empty-orders">
-                        <FiPackage />
-                        <p>暂无订单</p>
-                    </div>
-                )}
             </div>
         </div>
     )
@@ -213,6 +270,7 @@ function OrdersPage() {
 
 // 修改密码页
 function PasswordPage() {
+    const { token } = useAuthStore()
     const [formData, setFormData] = useState({
         oldPassword: '',
         newPassword: '',
@@ -229,7 +287,7 @@ function PasswordPage() {
         setFormData({ ...formData, [e.target.name]: e.target.value })
     }
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault()
 
         if (formData.newPassword !== formData.confirmPassword) {
@@ -243,11 +301,32 @@ function PasswordPage() {
         }
 
         setLoading(true)
-        setTimeout(() => {
-            setLoading(false)
-            toast.success('密码修改成功')
+        try {
+            const res = await fetch('/api/auth/change-password', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    oldPassword: formData.oldPassword,
+                    newPassword: formData.newPassword
+                })
+            })
+
+            const data = await res.json()
+
+            if (!res.ok) {
+                throw new Error(data.error || '修改失败')
+            }
+
+            toast.success(data.message)
             setFormData({ oldPassword: '', newPassword: '', confirmPassword: '' })
-        }, 1000)
+        } catch (error) {
+            toast.error(error.message)
+        } finally {
+            setLoading(false)
+        }
     }
 
     return (

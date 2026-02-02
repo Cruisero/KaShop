@@ -12,14 +12,16 @@ datasource db {
 
 // 用户表
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  password  String
-  username  String?
-  role      Role     @default(USER)
-  avatar    String?
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id                String    @id @default(uuid())
+  email             String    @unique
+  password          String
+  username          String?
+  role              Role      @default(USER)
+  avatar            String?
+  emailVerified     Boolean   @default(false) @map("email_verified")
+  verificationToken String?   @map("verification_token")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
   
   orders    Order[]
   

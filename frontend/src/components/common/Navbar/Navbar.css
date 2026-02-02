@@ -10,9 +10,9 @@
 }
 
 .navbar-container {
-    max-width: 1400px;
+    max-width: none;
     margin: 0 auto;
-    padding: 0 24px;
+    padding: 0 40px;
     height: 70px;
     display: flex;
     align-items: center;
@@ -39,8 +39,8 @@
 /* 搜索栏 */
 .navbar-search {
     flex: 1;
-    max-width: 500px;
-    margin: 0 24px;
+    max-width: 600px;
+    margin: 0 30px;
     position: relative;
 }
 
@@ -102,16 +102,16 @@
     top: 70px;
     left: 0;
     right: 0;
-    height: 140px;
+    bottom: 0;
+    height: calc(100vh - 70px);
     width: 100%;
     max-width: 100%;
     background: var(--bg-primary);
     border: none;
     border-top: 1px solid var(--border-color);
-    border-bottom: 1px solid var(--border-color);
-    border-radius: 15px;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.05), 0 8px 20px rgba(0, 0, 0, 0.05);
-    overflow: hidden;
+    border-radius: 0;
+    box-shadow: none;
+    overflow-y: auto;
     z-index: 1000;
     animation: dropdownSlideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
     backdrop-filter: blur(20px);
@@ -130,7 +130,7 @@
 }
 
 .dropdown-section {
-    max-width: 1400px;
+    max-width: 100%;
     margin: 0 auto;
     padding: 20px 24px;
 }
@@ -247,6 +247,109 @@
     color: white;
     background: var(--error);
     transform: scale(1.1);
+}
+
+/* 推荐商品图标 */
+.dropdown-icon.recommend {
+    color: #ec4899;
+    opacity: 1;
+}
+
+/* 推荐商品区域 */
+.recommend-section {
+    padding-top: 24px !important;
+    border-top: 1px solid var(--border-color);
+}
+
+/* 推荐商品网格 */
+.recommend-products-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 16px;
+}
+
+/* 隐藏超出一行的商品 - 默认6列 */
+.recommend-products-grid> :nth-child(n+7) {
+    display: none;
+}
+
+/* MacBook尺寸 (<=1200px) 显示5列 */
+@media (max-width: 1200px) {
+    .recommend-products-grid {
+        grid-template-columns: repeat(5, 1fr);
+    }
+
+    /* 5列时隐藏第6个开始 */
+    .recommend-products-grid> :nth-child(n+6) {
+        display: none;
+    }
+}
+
+/* 小屏 (<=900px) 显示4列 */
+@media (max-width: 900px) {
+    .recommend-products-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+
+    /* 4列时隐藏第5个开始 */
+    .recommend-products-grid> :nth-child(n+5) {
+        display: none;
+    }
+}
+
+/* 推荐商品卡片 */
+.recommend-product-card {
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    overflow: hidden;
+    text-decoration: none;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.recommend-product-card:hover {
+    border-color: var(--primary);
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
+}
+
+.recommend-product-image {
+    aspect-ratio: 1;
+    overflow: hidden;
+    background: var(--bg-secondary);
+}
+
+.recommend-product-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.recommend-product-card:hover .recommend-product-image img {
+    transform: scale(1.05);
+}
+
+.recommend-product-info {
+    padding: 12px;
+}
+
+.recommend-product-name {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin-bottom: 6px;
+}
+
+.recommend-product-price {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--primary);
 }
 
 /* 搜索建议列表 */
@@ -460,8 +563,8 @@
     font-size: 0.9rem;
 }
 
-/* 响应式 */
-@media (max-width: 768px) {
+/* 响应式 - 平板 */
+@media (max-width: 900px) {
     .navbar-links {
         display: none;
     }
@@ -472,14 +575,254 @@
     }
 
     .search-btn {
-        padding: 10px 12px;
-    }
-
-    .dropdown-section {
-        padding: 16px;
+        padding: 10px 14px;
     }
 
     .user-name {
+        display: none;
+    }
+
+    .mobile-search-btn {
+        display: none;
+    }
+}
+
+/* 响应式 - 移动端 */
+@media (max-width: 600px) {
+    .navbar-container {
+        height: 56px;
+        padding: 0 12px;
+    }
+
+    .navbar-logo {
+        font-size: 1.2rem;
+    }
+
+    .logo-image {
+        height: 26px;
+    }
+
+    /* 隐藏桌面搜索栏 */
+    .navbar-search {
+        display: none;
+    }
+
+    /* 显示移动端搜索按钮 */
+    .mobile-search-btn {
+        display: flex !important;
+    }
+
+    .navbar-actions {
+        gap: 6px;
+    }
+
+    .nav-icon-btn {
+        width: 36px;
+        height: 36px;
+        font-size: 1.1rem;
+    }
+
+    .nav-login-btn {
+        padding: 7px 12px;
+        font-size: 0.8rem;
+    }
+
+    .navbar-links {
+        display: none;
+    }
+}
+
+/* 移动端搜索覆盖层 */
+.mobile-search-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    height: 100vh;
+    height: 100dvh;
+    /* 动态视口高度，解决移动端浏览器地址栏问题 */
+    background-color: #ffffff;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    animation: slideDown 0.25s ease-out;
+}
+
+/* 暗色模式 */
+[data-theme="dark"] .mobile-search-overlay {
+    background-color: #0a0a0a;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.mobile-search-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.mobile-search-input-wrapper {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 24px;
+    padding: 0 4px 0 14px;
+    transition: all var(--transition-fast);
+}
+
+.mobile-search-input-wrapper:focus-within {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+.mobile-search-input-wrapper .search-icon {
+    color: var(--text-tertiary);
+    font-size: 1.1rem;
+    margin: 0;
+    flex-shrink: 0;
+}
+
+.mobile-search-input {
+    flex: 1;
+    padding: 10px 12px;
+    font-size: 1rem;
+    color: var(--text-primary);
+    background: transparent;
+    border: none;
+    outline: none;
+}
+
+.mobile-search-input::placeholder {
+    color: var(--text-tertiary);
+}
+
+.mobile-search-clear {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    color: var(--text-tertiary);
+    background: var(--bg-color);
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.mobile-search-clear:hover {
+    color: var(--text-primary);
+    background: var(--border-color);
+}
+
+.mobile-search-cancel {
+    padding: 8px 4px;
+    font-size: 0.95rem;
+    color: var(--primary);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.mobile-search-content {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    background: var(--bg-primary);
+    padding: 16px;
+}
+
+.mobile-section-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 16px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.mobile-section-title svg {
+    color: var(--primary);
+}
+
+.mobile-keyword-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.mobile-keyword-tag {
+    padding: 10px 16px;
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.mobile-keyword-tag:hover {
+    border-color: var(--primary);
+    background: rgba(239, 68, 68, 0.1);
+}
+
+.mobile-suggestion-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.mobile-suggestion-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 0;
+    font-size: 0.95rem;
+    color: var(--text-primary);
+    border-bottom: 1px solid var(--border-color);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.mobile-suggestion-item:last-child {
+    border-bottom: none;
+}
+
+.mobile-suggestion-item:active {
+    background: rgba(239, 68, 68, 0.05);
+}
+
+.mobile-suggestion-item svg {
+    color: var(--text-tertiary);
+    font-size: 1rem;
+}
+
+/* 桌面端隐藏移动端搜索按钮 */
+@media (min-width: 601px) {
+    .mobile-search-btn {
+        display: none;
+    }
+
+    .mobile-search-overlay {
         display: none;
     }
 }

@@ -1,11 +1,9 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import { FiShoppingCart, FiTag, FiBox } from 'react-icons/fi'
-import { useCartStore } from '../../store/cartStore'
-import toast from 'react-hot-toast'
+import { FiTag, FiBox } from 'react-icons/fi'
 import './Products.css'
 
-const API_BASE = 'http://localhost:8080/api'
+const API_BASE = '/api'
 
 // 处理图片 URL，支持不同尺寸
 const getImageUrl = (url, size = 'large') => {
@@ -14,9 +12,9 @@ const getImageUrl = (url, size = 'large') => {
     // 替换尺寸路径
     if (url.includes('/uploads/products/')) {
         const newUrl = url.replace(/\/(large|medium|original)\//, `/${size}/`)
-        return `http://localhost:8080${newUrl}`
+        return `${newUrl}`
     }
-    return `http://localhost:8080${url}`
+    return `${url}`
 }
 
 // 检测是否为移动端
@@ -39,7 +37,7 @@ function Products() {
     const [products, setProducts] = useState([])
     const [categories, setCategories] = useState(defaultCategories)
     const [loading, setLoading] = useState(true)
-    const addItem = useCartStore((state) => state.addItem)
+
 
     // 获取分类
     useEffect(() => {
@@ -110,12 +108,7 @@ function Products() {
         }
     }, [products, sortBy])
 
-    const handleAddToCart = (product, e) => {
-        e.preventDefault()
-        e.stopPropagation()
-        addItem(product, 1)
-        toast.success(`已添加 ${product.name} 到购物车`)
-    }
+
 
     return (
         <div className="products-page">
@@ -217,12 +210,6 @@ function Products() {
                                                 </span>
                                             )}
                                         </div>
-                                        <button
-                                            className="cart-btn"
-                                            onClick={(e) => handleAddToCart(product, e)}
-                                        >
-                                            <FiShoppingCart />
-                                        </button>
                                     </div>
                                 </div>
                             </Link>

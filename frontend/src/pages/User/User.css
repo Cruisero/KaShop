@@ -143,6 +143,73 @@
     margin-bottom: 24px;
 }
 
+/* 邮箱验证提示 */
+.email-verify-alert {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 20px 24px;
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    border: 1px solid #f59e0b;
+    border-radius: var(--radius-md);
+    margin-bottom: 24px;
+}
+
+.email-verify-alert .alert-content span {
+    font-weight: 600;
+    color: #92400e;
+    font-size: 1rem;
+}
+
+.email-verify-alert .alert-content p {
+    margin: 4px 0 0;
+    font-size: 0.9rem;
+    color: #b45309;
+}
+
+.email-verify-alert .btn-warning {
+    background: #f59e0b;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: var(--radius-sm);
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s;
+}
+
+.email-verify-alert .btn-warning:hover {
+    background: #d97706;
+}
+
+.email-verify-alert .btn-warning:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+/* 邮箱验证状态徽章 */
+.verified-badge {
+    display: inline-block;
+    margin-left: 10px;
+    padding: 2px 8px;
+    background: rgba(16, 185, 129, 0.15);
+    color: var(--success);
+    font-size: 0.75rem;
+    border-radius: 4px;
+}
+
+.unverified-badge {
+    display: inline-block;
+    margin-left: 10px;
+    padding: 2px 8px;
+    background: rgba(239, 68, 68, 0.15);
+    color: var(--error);
+    font-size: 0.75rem;
+    border-radius: 4px;
+}
+
 /* 个人信息页 */
 .profile-card {
     display: flex;

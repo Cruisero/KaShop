@@ -4,42 +4,6 @@ import { FiCheck, FiClock, FiCopy, FiPackage, FiAlertCircle } from 'react-icons/
 import toast from 'react-hot-toast'
 import './OrderResult.css'
 
-// 模拟订单数据
-const mockOrders = {
-    'KA202401230001': {
-        orderNo: 'KA202401230001',
-        status: 'completed',
-        email: 'user@example.com',
-        product: {
-            name: 'Netflix 高级会员月卡',
-            image: 'https://images.unsplash.com/photo-1574375927938-d5a98e8ffe85?w=200&h=150&fit=crop',
-        },
-        quantity: 1,
-        totalAmount: 49.90,
-        paymentMethod: '支付宝',
-        createdAt: '2024-01-23 14:32:15',
-        paidAt: '2024-01-23 14:33:02',
-        cards: [
-            { id: 1, content: 'netflix_user@email.com\n密码: Netflix2024#Secure' }
-        ]
-    },
-    'KA202401230002': {
-        orderNo: 'KA202401230002',
-        status: 'pending',
-        email: 'user2@example.com',
-        product: {
-            name: 'Spotify Premium 月卡',
-            image: 'https://images.unsplash.com/photo-1614680376593-902f74cf0d41?w=200&h=150&fit=crop',
-        },
-        quantity: 2,
-        totalAmount: 39.80,
-        paymentMethod: '微信支付',
-        createdAt: '2024-01-23 15:45:00',
-        paidAt: null,
-        cards: []
-    }
-}
-
 const statusConfig = {
     pending: { label: '待支付', icon: FiClock, color: 'warning' },
     paid: { label: '已支付', icon: FiCheck, color: 'info' },
@@ -54,13 +18,45 @@ function OrderResult() {
     const [showCards, setShowCards] = useState(false)
 
     useEffect(() => {
-        setLoading(true)
-        // 模拟获取订单
-        setTimeout(() => {
-            const found = mockOrders[orderNo] || mockOrders['KA202401230001']
-            setOrder(found)
-            setLoading(false)
-        }, 500)
+        const fetchOrder = async () => {
+            setLoading(true)
+            try {
+                const res = await fetch(`/api/orders/${orderNo}`)
+                const data = await res.json()
+
+                if (data.error) {
+                    setOrder(null)
+                } else {
+                    // 格式化订单数据以匹配现有结构
+                    setOrder({
+                        orderNo: data.orderNo,
+                        status: data.status?.toLowerCase() || 'pending',
+                        email: data.email,
+                        product: {
+                            name: data.productName || data.product?.name,
+                            image: data.product?.image || 'https://via.placeholder.com/200x150',
+                        },
+                        quantity: data.quantity,
+                        totalAmount: parseFloat(data.totalAmount),
+                        paymentMethod: data.paymentMethod === 'alipay' ? '支付宝' :
+                            data.paymentMethod === 'wechat' ? '微信支付' : data.paymentMethod,
+                        createdAt: new Date(data.createdAt).toLocaleString(),
+                        paidAt: data.paidAt ? new Date(data.paidAt).toLocaleString() : null,
+                        cards: (data.cards || []).map((c, idx) => ({
+                            id: idx + 1,
+                            content: c.content || c
+                        }))
+                    })
+                }
+            } catch (error) {
+                console.error('获取订单失败:', error)
+                setOrder(null)
+            } finally {
+                setLoading(false)
+            }
+        }
+
+        if (orderNo) fetchOrder()
     }, [orderNo])
 
     const copyToClipboard = (text) => {

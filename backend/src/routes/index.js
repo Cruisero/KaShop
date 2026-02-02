@@ -13,7 +13,7 @@ const uploadRoutes = require('./upload.routes')
 // API 版本信息
 router.get('/', (req, res) => {
     res.json({
-        name: 'Kashop API',
+        name: 'HaoDongXi API',
         version: '1.0.0',
         description: '虚拟物品发卡平台接口'
     })

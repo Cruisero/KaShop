@@ -19,4 +19,14 @@ router.post('/refresh', authController.refreshToken)
 // 退出登录
 router.post('/logout', authController.logout)
 
+// 验证邮箱
+router.get('/verify-email', authController.verifyEmail)
+
+// 重发验证邮件 (需要登录)
+const { authenticate } = require('../middleware/auth')
+router.post('/resend-verification', authenticate, authController.resendVerification)
+
+// 修改密码 (需要登录)
+router.post('/change-password', authenticate, authController.changePassword)
+
 module.exports = router

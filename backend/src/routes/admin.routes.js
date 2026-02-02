@@ -27,10 +27,12 @@ router.put('/orders/:id/status', adminController.updateOrderStatus)
 
 // 用户管理
 router.get('/users', adminController.getUsers)
+router.post('/users/cleanup-unverified', adminController.cleanupUnverifiedAccounts)
 
 // 系统设置
 router.get('/settings', adminController.getSettings)
 router.put('/settings', adminController.updateSettings)
+router.post('/settings/test-email', adminController.testEmail)
 
 // 卡密管理
 router.get('/cards', adminController.getCards)

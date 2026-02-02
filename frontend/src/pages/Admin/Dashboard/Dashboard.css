@@ -16,6 +16,10 @@
     display: flex;
     flex-direction: column;
     transition: width var(--transition-normal);
+    height: calc(100vh - 70px);
+    position: sticky;
+    top: 70px;
+    overflow-y: auto;
 }
 
 .sidebar-collapsed .admin-sidebar {
@@ -26,17 +30,20 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 20px;
-    border-bottom: 1px solid var(--border-color);
+    padding: 16px 20px;
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, rgba(248, 250, 252, 0.5) 100%);
+    border-bottom: 1px solid rgba(239, 68, 68, 0.1);
 }
 
-.sidebar-logo {
-    font-size: 1.25rem;
+.sidebar-title {
+    font-size: 0.9rem;
     font-weight: 700;
-    color: var(--text-primary);
+    color: #334155;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
 }
 
-.sidebar-collapsed .sidebar-logo {
+.sidebar-collapsed .sidebar-title {
     display: none;
 }
 
@@ -104,6 +111,8 @@
 .sidebar-footer {
     padding: 16px;
     border-top: 1px solid var(--border-color);
+    margin-top: auto;
+    flex-shrink: 0;
 }
 
 .user-info {

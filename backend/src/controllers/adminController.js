@@ -437,6 +437,22 @@ exports.updateSettings = async (req, res, next) => {
     }
 }
 
+// 测试邮件配置
+exports.testEmail = async (req, res, next) => {
+    try {
+        const emailService = require('../services/emailService')
+        const result = await emailService.testEmailConnection()
+
+        if (result.success) {
+            res.json({ success: true, message: '邮件配置测试成功，连接正常' })
+        } else {
+            res.status(400).json({ success: false, error: result.error })
+        }
+    } catch (error) {
+        next(error)
+    }
+}
+
 // ==================== 卡密管理 ====================
 
 // 获取卡密列表
@@ -606,6 +622,24 @@ exports.updateCard = async (req, res, next) => {
         })
 
         res.json({ message: '卡密更新成功', card: updatedCard })
+    } catch (error) {
+        next(error)
+    }
+}
+
+// 手动清理未验证账户
+exports.cleanupUnverifiedAccounts = async (req, res, next) => {
+    try {
+        const days = parseInt(req.query.days) || 14
+        const { cleanupUnverifiedAccounts } = require('../utils/accountCleanup')
+
+        const result = await cleanupUnverifiedAccounts(days)
+
+        res.json({
+            message: `已清理 ${result.deleted} 个未验证账户`,
+            deleted: result.deleted,
+            users: result.users || []
+        })
     } catch (error) {
         next(error)
     }

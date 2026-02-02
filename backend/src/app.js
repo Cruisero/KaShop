@@ -6,6 +6,7 @@ const rateLimit = require('express-rate-limit')
 const routes = require('./routes')
 const errorHandler = require('./middleware/errorHandler')
 const logger = require('./utils/logger')
+const { initScheduledTasks } = require('./tasks/scheduler')
 
 const app = express()
 
@@ -48,6 +49,9 @@ app.use('/api', routes)
 app.get('/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() })
 })
+
+// 初始化定时任务
+initScheduledTasks()
 
 // 404 处理
 app.use((req, res) => {

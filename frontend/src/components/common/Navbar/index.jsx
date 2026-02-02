@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { FiShoppingCart, FiSearch, FiUser, FiSun, FiMoon, FiTrendingUp } from 'react-icons/fi'
+import { FiShoppingCart, FiSearch, FiUser, FiSun, FiMoon, FiTrendingUp, FiX, FiHeart } from 'react-icons/fi'
 import { useCartStore } from '../../../store/cartStore'
 import { useAuthStore } from '../../../store/authStore'
 import { useThemeStore } from '../../../store/themeStore'
@@ -11,22 +11,6 @@ import './Navbar.css'
 // 热门搜索关键词
 const hotSearches = ['Netflix', 'ChatGPT', 'Spotify', '游戏账号', 'Adobe', '网盘会员', 'YouTube', 'Office']
 
-// 模拟商品数据用于搜索建议
-const mockProducts = [
-    { id: '1', name: 'Netflix 高级会员月卡' },
-    { id: '2', name: 'Spotify Premium 月卡' },
-    { id: '3', name: 'Steam 游戏账号 - GTA5' },
-    { id: '4', name: 'ChatGPT Plus 月卡' },
-    { id: '5', name: 'YouTube Premium 年卡' },
-    { id: '6', name: '百度网盘超级会员月卡' },
-    { id: '7', name: 'Discord Nitro 月卡' },
-    { id: '8', name: 'Adobe Creative Cloud 月卡' },
-    { id: '9', name: 'Steam 游戏账号 - 艾尔登法环' },
-    { id: '10', name: 'Apple Music 月卡' },
-    { id: '11', name: 'Disney+ 月卡' },
-    { id: '12', name: 'Office 365 年卡' },
-]
-
 function Navbar() {
     const location = useLocation()
     const navigate = useNavigate()
@@ -36,7 +20,13 @@ function Navbar() {
 
     const [searchQuery, setSearchQuery] = useState('')
     const [showDropdown, setShowDropdown] = useState(false)
+    const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
+    const [suggestions, setSuggestions] = useState([])
+    const [searchLoading, setSearchLoading] = useState(false)
+    const [recommendedProducts, setRecommendedProducts] = useState([])
     const searchRef = useRef(null)
+    const mobileSearchInputRef = useRef(null)
+    const debounceRef = useRef(null)
 
     const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0)
 
@@ -51,13 +41,54 @@ function Navbar() {
         return () => document.removeEventListener('mousedown', handleClickOutside)
     }, [])
 
-    // 实时搜索建议
-    const suggestions = useMemo(() => {
-        if (!searchQuery.trim()) return []
-        const query = searchQuery.toLowerCase()
-        return mockProducts
-            .filter(p => p.name.toLowerCase().includes(query))
-            .slice(0, 6)
+    // 加载推荐商品
+    useEffect(() => {
+        const fetchRecommended = async () => {
+            try {
+                const res = await fetch('/api/products/hot?limit=6')
+                const data = await res.json()
+                setRecommendedProducts(data.products || [])
+            } catch (error) {
+                console.error('推荐商品加载失败:', error)
+            }
+        }
+        fetchRecommended()
+    }, [])
+
+    // 实时搜索建议 - 从API获取
+    useEffect(() => {
+        if (!searchQuery.trim()) {
+            setSuggestions([])
+            return
+        }
+
+        // 防抖处理
+        if (debounceRef.current) {
+            clearTimeout(debounceRef.current)
+        }
+
+        debounceRef.current = setTimeout(async () => {
+            setSearchLoading(true)
+            try {
+                const res = await fetch(`/api/products?search=${encodeURIComponent(searchQuery.trim())}&limit=6`)
+                const data = await res.json()
+                setSuggestions((data.products || data || []).slice(0, 6).map(p => ({
+                    id: p.id,
+                    name: p.name
+                })))
+            } catch (error) {
+                console.error('搜索建议获取失败:', error)
+                setSuggestions([])
+            } finally {
+                setSearchLoading(false)
+            }
+        }, 300)
+
+        return () => {
+            if (debounceRef.current) {
+                clearTimeout(debounceRef.current)
+            }
+        }
     }, [searchQuery])
 
     // 执行搜索
@@ -65,9 +96,25 @@ function Navbar() {
         const searchTerm = query || searchQuery
         if (searchTerm.trim()) {
             setShowDropdown(false)
+            setMobileSearchOpen(false)
             setSearchQuery('')
             navigate(`/search?q=${encodeURIComponent(searchTerm.trim())}`)
         }
+    }
+
+    // 打开移动端搜索
+    const openMobileSearch = () => {
+        setMobileSearchOpen(true)
+        setTimeout(() => {
+            mobileSearchInputRef.current?.focus()
+        }, 100)
+    }
+
+    // 关闭移动端搜索
+    const closeMobileSearch = () => {
+        setMobileSearchOpen(false)
+        setSearchQuery('')
+        setSuggestions([])
     }
 
     const handleSubmit = (e) => {
@@ -100,7 +147,7 @@ function Navbar() {
                 <Link to="/" className="navbar-logo">
                     <img
                         src={theme === 'dark' ? logoDarkImg : logoImg}
-                        alt="Kashop Logo"
+                        alt="HaoDongXi Logo"
                         className="logo-image"
                     />
                 </Link>
@@ -177,6 +224,38 @@ function Navbar() {
                                 </div>
                             )}
 
+                            {/* 猜你喜欢推荐商品 */}
+                            {!searchQuery.trim() && recommendedProducts.length > 0 && (
+                                <div className="dropdown-section recommend-section">
+                                    <div className="dropdown-header">
+                                        <FiHeart className="dropdown-icon recommend" />
+                                        <span>猜你喜欢</span>
+                                    </div>
+                                    <div className="recommend-products-grid">
+                                        {recommendedProducts.map((product) => (
+                                            <Link
+                                                key={product.id}
+                                                to={`/products/${product.id}`}
+                                                className="recommend-product-card"
+                                                onClick={() => setShowDropdown(false)}
+                                            >
+                                                <div className="recommend-product-image">
+                                                    <img
+                                                        src={product.image || '/placeholder.png'}
+                                                        alt={product.name}
+                                                        onError={(e) => { e.target.src = '/placeholder.png' }}
+                                                    />
+                                                </div>
+                                                <div className="recommend-product-info">
+                                                    <div className="recommend-product-name">{product.name}</div>
+                                                    <div className="recommend-product-price">¥{product.price?.toFixed(2)}</div>
+                                                </div>
+                                            </Link>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
                             {/* 无搜索结果提示 */}
                             {searchQuery.trim() && suggestions.length === 0 && (
                                 <div className="no-suggestions">
@@ -206,6 +285,15 @@ function Navbar() {
 
                 {/* 右侧操作 */}
                 <div className="navbar-actions">
+                    {/* 移动端搜索图标 */}
+                    <button
+                        className="nav-icon-btn mobile-search-btn"
+                        onClick={openMobileSearch}
+                        title="搜索"
+                    >
+                        <FiSearch />
+                    </button>
+
                     {/* 主题切换 */}
                     <button
                         className="nav-icon-btn theme-toggle-btn"
@@ -242,6 +330,76 @@ function Navbar() {
                     )}
                 </div>
             </div>
+
+            {/* 移动端搜索覆盖层 */}
+            {mobileSearchOpen && (
+                <div className="mobile-search-overlay">
+                    <div className="mobile-search-header">
+                        <div className="mobile-search-input-wrapper">
+                            <FiSearch className="search-icon" />
+                            <input
+                                ref={mobileSearchInputRef}
+                                type="text"
+                                className="mobile-search-input"
+                                placeholder="搜索商品..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                onKeyDown={handleKeyDown}
+                            />
+                            {searchQuery && (
+                                <button
+                                    className="mobile-search-clear"
+                                    onClick={() => setSearchQuery('')}
+                                >
+                                    <FiX />
+                                </button>
+                            )}
+                        </div>
+                        <button className="mobile-search-cancel" onClick={closeMobileSearch}>
+                            取消
+                        </button>
+                    </div>
+
+                    <div className="mobile-search-content">
+                        {/* 搜索建议 */}
+                        {searchQuery.trim() && suggestions.length > 0 && (
+                            <div className="mobile-suggestion-list">
+                                {suggestions.map((item) => (
+                                    <div
+                                        key={item.id}
+                                        className="mobile-suggestion-item"
+                                        onClick={() => handleSuggestionClick(item.name)}
+                                    >
+                                        <FiSearch />
+                                        <span>{item.name}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {/* 热门搜索 */}
+                        {!searchQuery.trim() && (
+                            <div className="mobile-hot-searches">
+                                <div className="mobile-section-title">
+                                    <FiTrendingUp />
+                                    <span>热门搜索</span>
+                                </div>
+                                <div className="mobile-keyword-tags">
+                                    {hotSearches.map((item, index) => (
+                                        <div
+                                            key={index}
+                                            className="mobile-keyword-tag"
+                                            onClick={() => handleKeywordClick(item)}
+                                        >
+                                            {item}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
         </nav>
     )
 }

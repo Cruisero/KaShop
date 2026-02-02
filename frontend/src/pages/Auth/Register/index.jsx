@@ -42,16 +42,39 @@ function Register() {
 
         setLoading(true)
 
-        // 模拟注册
-        setTimeout(() => {
-            setLoading(false)
-            login(
-                { id: '3', email: formData.email, username: formData.username, role: 'user' },
-                'mock-jwt-token'
-            )
-            toast.success('注册成功')
+        try {
+            const response = await fetch('/api/auth/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    email: formData.email,
+                    password: formData.password,
+                    username: formData.username
+                })
+            })
+
+            const data = await response.json()
+
+            if (!response.ok) {
+                throw new Error(data.error || '注册失败')
+            }
+
+            // 登录用户
+            login(data.user, data.token)
+
+            // 显示验证邮件提示
+            if (!data.user.emailVerified) {
+                toast.success('注册成功！请查收验证邮件')
+            } else {
+                toast.success('注册成功')
+            }
+
             navigate('/')
-        }, 800)
+        } catch (error) {
+            toast.error(error.message)
+        } finally {
+            setLoading(false)
+        }
     }
 
     return (
@@ -59,7 +82,7 @@ function Register() {
             <div className="auth-container">
                 <div className="auth-header">
                     <h1>创建账号</h1>
-                    <p>注册 Kashop 账号，享受更多服务</p>
+                    <p>注册 HaoDongXi 账号，享受更多服务</p>
                 </div>
 
                 <form className="auth-form" onSubmit={handleSubmit}>

@@ -5,7 +5,7 @@ import { useCartStore } from '../../store/cartStore'
 import toast from 'react-hot-toast'
 import './Search.css'
 
-const API_BASE = 'http://localhost:8080/api'
+const API_BASE = '/api'
 
 // 处理图片 URL，支持不同尺寸
 const getImageUrl = (url, size = 'large') => {
@@ -13,9 +13,9 @@ const getImageUrl = (url, size = 'large') => {
     if (url.startsWith('http')) return url
     if (url.includes('/uploads/products/')) {
         const newUrl = url.replace(/\/(large|medium|original)\//, `/${size}/`)
-        return `http://localhost:8080${newUrl}`
+        return `${newUrl}`
     }
-    return `http://localhost:8080${url}`
+    return `${url}`
 }
 
 function Search() {
@@ -91,9 +91,6 @@ function Search() {
                         搜索结果：<span className="search-keyword">"{query}"</span>
                     </h1>
                 </div>
-                {!loading && searchResults.length > 0 && (
-                    <p className="search-count">找到 {searchResults.length} 件相关商品</p>
-                )}
             </div>
 
             {loading ? (
@@ -167,12 +164,6 @@ function Search() {
                                                 <span className="price-original">¥{product.originalPrice.toFixed(2)}</span>
                                             )}
                                         </div>
-                                        <button
-                                            className="add-cart-btn"
-                                            onClick={(e) => handleAddToCart(product, e)}
-                                        >
-                                            <FiShoppingCart />
-                                        </button>
                                     </div>
                                 </div>
                             </Link>

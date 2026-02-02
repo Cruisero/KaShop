@@ -55,14 +55,45 @@ function Checkout() {
 
         setLoading(true)
 
-        // 模拟创建订单
-        setTimeout(() => {
-            setLoading(false)
-            const orderNo = 'KA' + Date.now()
+        try {
+            // 为每个商品创建订单
+            const orderPromises = items.map(item =>
+                fetch('/api/orders', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...(isAuthenticated && { 'Authorization': `Bearer ${useAuthStore.getState().token}` })
+                    },
+                    body: JSON.stringify({
+                        productId: item.id,
+                        quantity: item.quantity,
+                        email: email,
+                        paymentMethod: paymentMethod
+                    })
+                }).then(res => res.json())
+            )
+
+            const results = await Promise.all(orderPromises)
+
+            // 检查是否有错误
+            const errors = results.filter(r => r.error)
+            if (errors.length > 0) {
+                toast.error(errors[0].error || '订单创建失败')
+                setLoading(false)
+                return
+            }
+
+            // 获取第一个订单号（如果多个商品，可以显示第一个）
+            const firstOrder = results[0]
             clearCart()
             toast.success('订单创建成功')
-            navigate(`/order/${orderNo}`)
-        }, 1500)
+            navigate(`/order/${firstOrder.orderNo}`)
+        } catch (error) {
+            console.error('创建订单失败:', error)
+            toast.error('创建订单失败，请稍后重试')
+        } finally {
+            setLoading(false)
+        }
     }
 
     return (

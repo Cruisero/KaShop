@@ -166,41 +166,6 @@ function CustomSelect({ value, onChange, options, placeholder, name, required })
 }
 
 
-// 模拟数据
-const mockStats = {
-    totalOrders: 1234,
-    totalRevenue: 58960.50,
-    totalProducts: 48,
-    totalUsers: 892,
-    todayOrders: 28,
-    todayRevenue: 1680.00,
-}
-
-const mockRecentOrders = [
-    { id: 1, orderNo: 'KA202401230015', product: 'Netflix会员月卡', amount: 49.90, status: 'completed', time: '10分钟前' },
-    { id: 2, orderNo: 'KA202401230014', product: 'ChatGPT Plus月卡', amount: 149.00, status: 'completed', time: '25分钟前' },
-    { id: 3, orderNo: 'KA202401230013', product: 'Spotify月卡', amount: 19.90, status: 'pending', time: '32分钟前' },
-    { id: 4, orderNo: 'KA202401230012', product: 'Steam账号-GTA5', amount: 68.00, status: 'completed', time: '1小时前' },
-    { id: 5, orderNo: 'KA202401230011', product: 'YouTube Premium年卡', amount: 168.00, status: 'completed', time: '2小时前' },
-]
-
-const mockCategories = [
-    { id: '1', name: '流媒体会员' },
-    { id: '2', name: '游戏账号' },
-    { id: '3', name: 'AI工具' },
-    { id: '4', name: '云存储服务' },
-    { id: '5', name: '其他服务' },
-]
-
-const mockProducts = [
-    { id: '1', name: 'Netflix 高级会员月卡', price: 49.90, stock: 128, sold: 2341, status: 'active', categoryId: '1' },
-    { id: '2', name: 'Spotify Premium 月卡', price: 19.90, stock: 256, sold: 1876, status: 'active', categoryId: '1' },
-    { id: '3', name: 'Steam 游戏账号 - GTA5', price: 68.00, stock: 45, sold: 892, status: 'active', categoryId: '2' },
-    { id: '4', name: 'ChatGPT Plus 月卡', price: 149.00, stock: 89, sold: 3421, status: 'active', categoryId: '3' },
-    { id: '5', name: 'YouTube Premium 年卡', price: 168.00, stock: 67, sold: 1234, status: 'active', categoryId: '1' },
-    { id: '6', name: '百度网盘超级会员月卡', price: 25.00, stock: 512, sold: 4521, status: 'active', categoryId: '4' },
-]
-
 // 侧边栏菜单
 const menuItems = [
     { path: '/admin', icon: FiHome, label: '仪表盘', exact: true },
@@ -213,6 +178,59 @@ const menuItems = [
 
 // 仪表盘首页
 function DashboardHome() {
+    const token = useAuthStore(state => state.token)
+    const [stats, setStats] = useState({
+        totalOrders: 0,
+        totalRevenue: 0,
+        totalProducts: 0,
+        totalUsers: 0,
+        todayOrders: 0,
+        todayRevenue: 0,
+    })
+    const [recentOrders, setRecentOrders] = useState([])
+    const [loading, setLoading] = useState(true)
+
+    useEffect(() => {
+        const fetchDashboard = async () => {
+            try {
+                const res = await fetch('/api/admin/dashboard', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                })
+                const data = await res.json()
+                setStats({
+                    totalOrders: data.totalOrders || 0,
+                    totalRevenue: data.totalRevenue || 0,
+                    totalProducts: data.totalProducts || 0,
+                    totalUsers: data.totalUsers || 0,
+                    todayOrders: data.todayOrders || 0,
+                    todayRevenue: data.todayRevenue || 0,
+                })
+                setRecentOrders(data.recentOrders || [])
+            } catch (error) {
+                console.error('获取仪表盘数据失败:', error)
+            } finally {
+                setLoading(false)
+            }
+        }
+        if (token) fetchDashboard()
+    }, [token])
+
+    const formatTime = (dateStr) => {
+        if (!dateStr) return '-'
+        const date = new Date(dateStr)
+        const now = new Date()
+        const diffMs = now - date
+        const diffMins = Math.floor(diffMs / 60000)
+        if (diffMins < 60) return `${diffMins}分钟前`
+        const diffHours = Math.floor(diffMins / 60)
+        if (diffHours < 24) return `${diffHours}小时前`
+        return date.toLocaleDateString()
+    }
+
+    if (loading) {
+        return <div className="dashboard-home"><p>加载中...</p></div>
+    }
+
     return (
         <div className="dashboard-home">
             {/* 统计卡片 */}
@@ -222,7 +240,7 @@ function DashboardHome() {
                         <FiShoppingBag />
                     </div>
                     <div className="stat-info">
-                        <span className="stat-value">{mockStats.totalOrders}</span>
+                        <span className="stat-value">{stats.totalOrders}</span>
                         <span className="stat-label">总订单</span>
                     </div>
                     <div className="stat-trend up">
@@ -235,7 +253,7 @@ function DashboardHome() {
                         <FiDollarSign />
                     </div>
                     <div className="stat-info">
-                        <span className="stat-value">¥{mockStats.totalRevenue.toFixed(2)}</span>
+                        <span className="stat-value">¥{stats.totalRevenue.toFixed(2)}</span>
                         <span className="stat-label">总收入</span>
                     </div>
                     <div className="stat-trend up">
@@ -248,7 +266,7 @@ function DashboardHome() {
                         <FiBox />
                     </div>
                     <div className="stat-info">
-                        <span className="stat-value">{mockStats.totalProducts}</span>
+                        <span className="stat-value">{stats.totalProducts}</span>
                         <span className="stat-label">商品数</span>
                     </div>
                 </div>
@@ -258,7 +276,7 @@ function DashboardHome() {
                         <FiUsers />
                     </div>
                     <div className="stat-info">
-                        <span className="stat-value">{mockStats.totalUsers}</span>
+                        <span className="stat-value">{stats.totalUsers}</span>
                         <span className="stat-label">用户数</span>
                     </div>
                     <div className="stat-trend up">
@@ -272,14 +290,14 @@ function DashboardHome() {
                 <div className="today-card">
                     <FiActivity />
                     <div>
-                        <span className="today-value">{mockStats.todayOrders}</span>
+                        <span className="today-value">{stats.todayOrders}</span>
                         <span className="today-label">今日订单</span>
                     </div>
                 </div>
                 <div className="today-card">
                     <FiDollarSign />
                     <div>
-                        <span className="today-value">¥{mockStats.todayRevenue.toFixed(2)}</span>
+                        <span className="today-value">¥{stats.todayRevenue.toFixed(2)}</span>
                         <span className="today-label">今日收入</span>
                     </div>
                 </div>
@@ -299,19 +317,22 @@ function DashboardHome() {
                         </tr>
                     </thead>
                     <tbody>
-                        {mockRecentOrders.map(order => (
-                            <tr key={order.id}>
+                        {recentOrders.map(order => (
+                            <tr key={order.orderNo}>
                                 <td className="order-no">{order.orderNo}</td>
-                                <td>{order.product}</td>
-                                <td>¥{order.amount.toFixed(2)}</td>
+                                <td>{order.productName}</td>
+                                <td>¥{parseFloat(order.totalAmount).toFixed(2)}</td>
                                 <td>
-                                    <span className={`status-badge ${order.status}`}>
-                                        {order.status === 'completed' ? '已完成' : '待支付'}
+                                    <span className={`status-badge ${order.status?.toLowerCase()}`}>
+                                        {order.status === 'COMPLETED' ? '已完成' : order.status === 'PENDING' ? '待支付' : order.status}
                                     </span>
                                 </td>
-                                <td className="time">{order.time}</td>
+                                <td className="time">{formatTime(order.createdAt)}</td>
                             </tr>
                         ))}
+                        {recentOrders.length === 0 && (
+                            <tr><td colSpan="5" style={{ textAlign: 'center' }}>暂无订单</td></tr>
+                        )}
                     </tbody>
                 </table>
             </div>
@@ -356,7 +377,7 @@ function ProductsManage() {
     const fetchProducts = async () => {
         try {
             setLoading(true)
-            const response = await fetch('http://localhost:8080/api/admin/products', {
+            const response = await fetch('/api/admin/products', {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
@@ -373,7 +394,7 @@ function ProductsManage() {
     // 获取分类列表
     const fetchCategories = async () => {
         try {
-            const response = await fetch('http://localhost:8080/api/admin/categories', {
+            const response = await fetch('/api/admin/categories', {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
@@ -392,7 +413,7 @@ function ProductsManage() {
             return
         }
         try {
-            const response = await fetch('http://localhost:8080/api/admin/categories', {
+            const response = await fetch('/api/admin/categories', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -413,7 +434,7 @@ function ProductsManage() {
     const handleDeleteCategory = async (categoryId, categoryName) => {
         showConfirm('删除分类', `确定要删除分类「${categoryName}」吗？`, async () => {
             try {
-                const response = await fetch(`http://localhost:8080/api/admin/categories/${categoryId}`, {
+                const response = await fetch(`/api/admin/categories/${categoryId}`, {
                     method: 'DELETE',
                     headers: {
                         'Authorization': `Bearer ${token}`
@@ -487,7 +508,7 @@ function ProductsManage() {
             `确定要删除商品「${product.name}」吗？此操作不可撤销。`,
             async () => {
                 try {
-                    const response = await fetch(`http://localhost:8080/api/admin/products/${product.id}`, {
+                    const response = await fetch(`/api/admin/products/${product.id}`, {
                         method: 'DELETE',
                         headers: {
                             'Authorization': `Bearer ${token}`
@@ -536,8 +557,8 @@ function ProductsManage() {
 
         try {
             const url = editingProduct
-                ? `http://localhost:8080/api/admin/products/${editingProduct.id}`
-                : 'http://localhost:8080/api/admin/products'
+                ? `/api/admin/products/${editingProduct.id}`
+                : '/api/admin/products'
 
             const response = await fetch(url, {
                 method: editingProduct ? 'PUT' : 'POST',
@@ -615,7 +636,7 @@ function ProductsManage() {
                 formDataUpload.append('images', item.file)
             })
 
-            const response = await fetch('http://localhost:8080/api/upload', {
+            const response = await fetch('/api/upload', {
                 method: 'POST',
                 body: formDataUpload
             })
@@ -656,7 +677,7 @@ function ProductsManage() {
     const removeUploadedImage = async (index) => {
         const image = formData.images[index]
         try {
-            await fetch(`http://localhost:8080/api/upload/${image.fileName}`, {
+            await fetch(`/api/upload/${image.fileName}`, {
                 method: 'DELETE'
             })
             setFormData(prev => ({
@@ -908,10 +929,10 @@ function ProductsManage() {
                                     {formData.images.map((img, index) => {
                                         // 处理不同格式的图片数据
                                         const imgUrl = typeof img === 'string'
-                                            ? `http://localhost:8080${img}`
+                                            ? `${img}`
                                             : img.urls?.medium
-                                                ? `http://localhost:8080${img.urls.medium}`
-                                                : `http://localhost:8080${img.urls?.original || img}`
+                                                ? `${img.urls.medium}`
+                                                : `${img.urls?.original || img}`
                                         return (
                                             <div key={`uploaded-${index}`} className="image-preview uploaded">
                                                 <img src={imgUrl} alt={`已上传 ${index + 1}`} />
@@ -1090,16 +1111,66 @@ function ProductsManage() {
 
 // 订单管理
 function OrdersManage() {
+    const token = useAuthStore(state => state.token)
+    const [orders, setOrders] = useState([])
+    const [loading, setLoading] = useState(true)
+    const [statusFilter, setStatusFilter] = useState('all')
+
+    useEffect(() => {
+        fetchOrders()
+    }, [statusFilter])
+
+    const fetchOrders = async () => {
+        setLoading(true)
+        try {
+            const url = statusFilter === 'all'
+                ? '/api/admin/orders'
+                : `/api/admin/orders?status=${statusFilter}`
+            const res = await fetch(url, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            })
+            const data = await res.json()
+            setOrders(data.orders || data || [])
+        } catch (error) {
+            console.error('获取订单失败:', error)
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    const formatTime = (dateStr) => {
+        if (!dateStr) return '-'
+        return new Date(dateStr).toLocaleString()
+    }
+
+    const statusMap = {
+        PENDING: { label: '待支付', class: 'pending' },
+        PAID: { label: '已支付', class: 'paid' },
+        COMPLETED: { label: '已完成', class: 'completed' },
+        CANCELLED: { label: '已取消', class: 'cancelled' }
+    }
+
+    if (loading) {
+        return <div className="manage-page"><p>加载中...</p></div>
+    }
+
     return (
         <div className="manage-page">
             <div className="page-header">
                 <h2>订单管理</h2>
+                <div className="header-stats">
+                    <span className="stat-item">共 {orders.length} 条订单</span>
+                </div>
                 <div className="filters">
-                    <select className="filter-select">
-                        <option>全部状态</option>
-                        <option>待支付</option>
-                        <option>已完成</option>
-                        <option>已取消</option>
+                    <select
+                        className="filter-select"
+                        value={statusFilter}
+                        onChange={(e) => setStatusFilter(e.target.value)}
+                    >
+                        <option value="all">全部状态</option>
+                        <option value="PENDING">待支付</option>
+                        <option value="COMPLETED">已完成</option>
+                        <option value="CANCELLED">已取消</option>
                     </select>
                 </div>
             </div>
@@ -1116,23 +1187,26 @@ function OrdersManage() {
                     </tr>
                 </thead>
                 <tbody>
-                    {mockRecentOrders.map(order => (
-                        <tr key={order.id}>
+                    {orders.map(order => (
+                        <tr key={order.id || order.orderNo}>
                             <td className="order-no">{order.orderNo}</td>
-                            <td>{order.product}</td>
-                            <td>¥{order.amount.toFixed(2)}</td>
-                            <td>user@example.com</td>
+                            <td>{order.productName}</td>
+                            <td>¥{parseFloat(order.totalAmount).toFixed(2)}</td>
+                            <td>{order.email}</td>
                             <td>
-                                <span className={`status-badge ${order.status}`}>
-                                    {order.status === 'completed' ? '已完成' : '待支付'}
+                                <span className={`status-badge ${statusMap[order.status]?.class || order.status?.toLowerCase()}`}>
+                                    {statusMap[order.status]?.label || order.status}
                                 </span>
                             </td>
-                            <td className="time">{order.time}</td>
+                            <td className="time">{formatTime(order.createdAt)}</td>
                             <td className="actions">
                                 <button className="action-btn view">查看</button>
                             </td>
                         </tr>
                     ))}
+                    {orders.length === 0 && (
+                        <tr><td colSpan="7" style={{ textAlign: 'center' }}>暂无订单</td></tr>
+                    )}
                 </tbody>
             </table>
         </div>
@@ -1168,7 +1242,7 @@ function CardsManage() {
         if (!token) return
         const fetchProducts = async () => {
             try {
-                const response = await fetch('http://localhost:8080/api/admin/products?pageSize=100', {
+                const response = await fetch('/api/admin/products?pageSize=100', {
                     headers: { 'Authorization': `Bearer ${token}` }
                 })
                 const data = await response.json()
@@ -1191,7 +1265,7 @@ function CardsManage() {
             if (selectedProductId) params.append('productId', selectedProductId)
             if (statusFilter) params.append('status', statusFilter)
 
-            const response = await fetch(`http://localhost:8080/api/admin/cards?${params}`, {
+            const response = await fetch(`/api/admin/cards?${params}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             })
             const data = await response.json()
@@ -1230,7 +1304,7 @@ function CardsManage() {
 
         try {
 
-            const response = await fetch('http://localhost:8080/api/admin/cards/import', {
+            const response = await fetch('/api/admin/cards/import', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -1258,7 +1332,7 @@ function CardsManage() {
 
         try {
 
-            const response = await fetch(`http://localhost:8080/api/admin/cards/${id}`, {
+            const response = await fetch(`/api/admin/cards/${id}`, {
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${token}` }
             })
@@ -1288,7 +1362,7 @@ function CardsManage() {
         }
 
         try {
-            const response = await fetch(`http://localhost:8080/api/admin/cards/${editingCard.id}`, {
+            const response = await fetch(`/api/admin/cards/${editingCard.id}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -1320,7 +1394,7 @@ function CardsManage() {
 
         try {
 
-            const response = await fetch('http://localhost:8080/api/admin/cards/batch-delete', {
+            const response = await fetch('/api/admin/cards/batch-delete', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -1584,31 +1658,85 @@ function CardsManage() {
 
 // 用户管理
 function UsersManage() {
+    const { showToast } = useToast()
+    const token = useAuthStore(state => state.token)
+    const [users, setUsers] = useState([])
+    const [loading, setLoading] = useState(true)
     const [searchTerm, setSearchTerm] = useState('')
     const [roleFilter, setRoleFilter] = useState('all')
 
-    // 模拟用户数据
-    const mockUsers = [
-        { id: '1', email: 'admin@kashop.com', username: 'Admin', role: 'ADMIN', status: 'active', orderCount: 0, totalSpent: 0, createdAt: '2024-01-01' },
-        { id: '2', email: 'user1@example.com', username: '张三', role: 'USER', status: 'active', orderCount: 15, totalSpent: 1280.50, createdAt: '2024-01-10' },
-        { id: '3', email: 'user2@example.com', username: '李四', role: 'USER', status: 'active', orderCount: 8, totalSpent: 560.00, createdAt: '2024-01-12' },
-        { id: '4', email: 'user3@example.com', username: 'Wang Wu', role: 'USER', status: 'inactive', orderCount: 3, totalSpent: 149.00, createdAt: '2024-01-15' },
-        { id: '5', email: 'vip@example.com', username: 'VIP用户', role: 'USER', status: 'active', orderCount: 45, totalSpent: 5680.00, createdAt: '2024-01-08' },
-    ]
+    useEffect(() => {
+        fetchUsers()
+    }, [])
 
-    const filteredUsers = mockUsers.filter(user => {
-        const matchSearch = user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            user.username.toLowerCase().includes(searchTerm.toLowerCase())
+    const fetchUsers = async () => {
+        setLoading(true)
+        try {
+            const res = await fetch('/api/admin/users', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            })
+            const data = await res.json()
+            setUsers(data.users || data || [])
+        } catch (error) {
+            console.error('获取用户列表失败:', error)
+            showToast('获取用户列表失败', 'error')
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    const filteredUsers = users.filter(user => {
+        const matchSearch = (user.email?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+            (user.username?.toLowerCase() || '').includes(searchTerm.toLowerCase())
         const matchRole = roleFilter === 'all' || user.role === roleFilter
         return matchSearch && matchRole
     })
 
-    const handleToggleStatus = (userId) => {
-        alert(`切换用户 ${userId} 状态`)
+    const handleToggleStatus = async (userId, currentStatus) => {
+        try {
+            const res = await fetch(`/api/admin/users/${userId}/toggle-status`, {
+                method: 'PATCH',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            })
+            if (res.ok) {
+                showToast('状态更新成功', 'success')
+                fetchUsers()
+            } else {
+                showToast('状态更新失败', 'error')
+            }
+        } catch (error) {
+            showToast('操作失败', 'error')
+        }
     }
 
-    const handleChangeRole = (userId, newRole) => {
-        alert(`将用户 ${userId} 角色改为 ${newRole}`)
+    const handleChangeRole = async (userId, newRole) => {
+        try {
+            const res = await fetch(`/api/admin/users/${userId}/role`, {
+                method: 'PATCH',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ role: newRole })
+            })
+            if (res.ok) {
+                showToast('角色更新成功', 'success')
+                fetchUsers()
+            } else {
+                showToast('角色更新失败', 'error')
+            }
+        } catch (error) {
+            showToast('操作失败', 'error')
+        }
+    }
+
+    const adminCount = users.filter(u => u.role === 'ADMIN').length
+
+    if (loading) {
+        return <div className="manage-page"><p>加载中...</p></div>
     }
 
     return (
@@ -1616,8 +1744,8 @@ function UsersManage() {
             <div className="page-header">
                 <h2>用户管理</h2>
                 <div className="header-stats">
-                    <span className="stat-item">总用户: {mockUsers.length}</span>
-                    <span className="stat-item">管理员: {mockUsers.filter(u => u.role === 'ADMIN').length}</span>
+                    <span className="stat-item">总用户: {users.length}</span>
+                    <span className="stat-item">管理员: {adminCount}</span>
                 </div>
             </div>
 
@@ -1652,8 +1780,6 @@ function UsersManage() {
                             <th>用户</th>
                             <th>角色</th>
                             <th>订单数</th>
-                            <th>消费总额</th>
-                            <th>状态</th>
                             <th>注册时间</th>
                             <th>操作</th>
                         </tr>
@@ -1664,17 +1790,17 @@ function UsersManage() {
                                 <td>
                                     <div className="user-cell">
                                         <div className="user-avatar-sm">
-                                            {user.username.charAt(0).toUpperCase()}
+                                            {(user.username || 'U').charAt(0).toUpperCase()}
                                         </div>
                                         <div className="user-info-cell">
-                                            <span className="user-name-cell">{user.username}</span>
+                                            <span className="user-name-cell">{user.username || '未设置'}</span>
                                             <span className="user-email-cell">{user.email}</span>
                                         </div>
                                     </div>
                                 </td>
                                 <td>
                                     <select
-                                        className={`role-select ${user.role.toLowerCase()}`}
+                                        className={`role-select ${(user.role || '').toLowerCase()}`}
                                         value={user.role}
                                         onChange={(e) => handleChangeRole(user.id, e.target.value)}
                                     >
@@ -1682,22 +1808,10 @@ function UsersManage() {
                                         <option value="ADMIN">管理员</option>
                                     </select>
                                 </td>
-                                <td>{user.orderCount}</td>
-                                <td className="amount">¥{user.totalSpent.toFixed(2)}</td>
-                                <td>
-                                    <span className={`status-badge ${user.status}`}>
-                                        {user.status === 'active' ? '正常' : '禁用'}
-                                    </span>
-                                </td>
-                                <td className="time">{user.createdAt}</td>
+                                <td>{user._count?.orders || 0}</td>
+                                <td className="time">{new Date(user.createdAt).toLocaleDateString()}</td>
                                 <td className="actions">
-                                    <button
-                                        className={`action-btn ${user.status === 'active' ? 'delete' : 'view'}`}
-                                        onClick={() => handleToggleStatus(user.id)}
-                                    >
-                                        {user.status === 'active' ? '禁用' : '启用'}
-                                    </button>
-                                    <button className="action-btn edit">订单</button>
+                                    <button className="action-btn edit">查看订单</button>
                                 </td>
                             </tr>
                         ))}
@@ -1705,13 +1819,15 @@ function UsersManage() {
                 </table>
             </div>
 
-            {filteredUsers.length === 0 && (
-                <div className="placeholder-content">
-                    <FiUsers />
-                    <p>未找到匹配的用户</p>
-                </div>
-            )}
-        </div>
+            {
+                filteredUsers.length === 0 && (
+                    <div className="placeholder-content">
+                        <FiUsers />
+                        <p>未找到匹配的用户</p>
+                    </div>
+                )
+            }
+        </div >
     )
 }
 
@@ -1721,10 +1837,10 @@ function SettingsPage() {
     const { token } = useAuthStore()
     const { showToast } = useToast()
 
-    // Frontend-only settings (mock/local)
+    // 默认设置
     const [settings, setSettings] = useState({
         // 基本设置
-        siteName: 'Kashop',
+        siteName: 'HaoDongXi',
         siteDescription: '虚拟物品自动发卡平台',
         contactEmail: 'support@kashop.com',
         // 支付设置
@@ -1734,93 +1850,80 @@ function SettingsPage() {
         // 订单设置
         orderTimeout: 30,
         autoCancel: true,
+        delayedDelivery: false,
+        delayedDeliveryMinutes: 5,
         // 邮件设置
-        smtpHost: 'smtp.example.com',
+        smtpHost: '',
         smtpPort: 465,
         smtpUser: '',
         smtpPass: '',
         emailNotify: true
     })
 
-    // Backend API settings
-    const [backendConfig, setBackendConfig] = useState(null)
-    const [lionpathTemplates, setLionpathTemplates] = useState([])
-    const [loadingConfig, setLoadingConfig] = useState(false)
-
-    const [activeTab, setActiveTab] = useState('verification') // Default to verification for user convenience
+    const [activeTab, setActiveTab] = useState('basic')
     const [saving, setSaving] = useState(false)
+    const [loading, setLoading] = useState(true)
 
-    // Load backend config
+    // 从后端加载设置
     useEffect(() => {
-        const loadData = async () => {
-            setLoadingConfig(true)
+        const loadSettings = async () => {
             try {
-                // Fetch Config
-                const configRes = await fetch('/api/config')
-                if (configRes.ok) {
-                    const data = await configRes.json()
-                    setBackendConfig(data)
+                const res = await fetch('/api/admin/settings', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                })
+                if (res.ok) {
+                    const data = await res.json()
+                    if (data.settings) {
+                        setSettings(prev => ({
+                            ...prev,
+                            ...Object.fromEntries(
+                                Object.entries(data.settings).map(([key, value]) => {
+                                    // 转换布尔值
+                                    if (value === 'true') return [key, true]
+                                    if (value === 'false') return [key, false]
+                                    // 转换数字
+                                    if (!isNaN(value) && value !== '') return [key, Number(value)]
+                                    return [key, value]
+                                })
+                            )
+                        }))
+                    }
                 }
-
-                // Fetch Templates
-                const tmplRes = await fetch('/api/lionpath-templates')
-                if (tmplRes.ok) {
-                    const data = await tmplRes.json()
-                    setLionpathTemplates(data.templates || [])
-                }
-            } catch (err) {
-                console.error("Failed to load backend config", err)
-                showToast('无法加载后台配置', 'warning')
+            } catch (error) {
+                console.error('加载设置失败:', error)
             } finally {
-                setLoadingConfig(false)
+                setLoading(false)
             }
         }
-        loadData()
-    }, [])
+        if (token) loadSettings()
+    }, [token])
 
     const handleChange = (key, value) => {
         setSettings(prev => ({ ...prev, [key]: value }))
     }
 
-    // Helper to update backend config deep properties
-    const updateBackendConfig = (path, value) => {
-        setBackendConfig(prev => {
-            const newConfig = JSON.parse(JSON.stringify(prev)) // Deep clone
-            let current = newConfig
-            const parts = path.split('.')
-            const last = parts.pop()
-
-            for (const part of parts) {
-                if (!current[part]) current[part] = {}
-                current = current[part]
-            }
-
-            current[last] = value
-            return newConfig
-        })
-    }
-
     const handleSave = async () => {
         setSaving(true)
         try {
-            // Save backend config if loaded
-            if (backendConfig) {
-                const res = await fetch('/api/config', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify(backendConfig)
-                })
+            // 将设置值转换为字符串
+            const settingsToSave = Object.fromEntries(
+                Object.entries(settings).map(([key, value]) => [key, String(value)])
+            )
 
-                if (!res.ok) {
-                    throw new Error('Failed to save backend config')
-                }
+            // 保存设置到后端
+            const res = await fetch('/api/admin/settings', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(settingsToSave)
+            })
+
+            if (!res.ok) {
+                throw new Error('保存失败')
             }
 
-            // Simulate waiting for local settings
-            await new Promise(r => setTimeout(r, 800))
             showToast('设置保存成功！', 'success')
 
         } catch (err) {
@@ -1832,7 +1935,6 @@ function SettingsPage() {
     }
 
     const tabs = [
-        { id: 'verification', label: '验证设置' },
         { id: 'basic', label: '基本设置' },
         { id: 'payment', label: '支付设置' },
         { id: 'order', label: '订单设置' },
@@ -1866,91 +1968,6 @@ function SettingsPage() {
             </div>
 
             <div className="settings-content">
-                {/* 验证设置 (LionPATH / Verifier) */}
-                {activeTab === 'verification' && (
-                    <div className="settings-section">
-                        {loadingConfig ? (
-                            <div className="placeholder-content"><p>加载配置中...</p></div>
-                        ) : backendConfig ? (
-                            <>
-                                <div className="setting-item">
-                                    <label>生成器提供商 (Provider)</label>
-                                    <select
-                                        value={backendConfig.aiGenerator?.provider || 'svg'}
-                                        onChange={(e) => updateBackendConfig('aiGenerator.provider', e.target.value)}
-                                        className="form-select"
-                                        style={{ padding: '8px', width: '100%', borderRadius: '4px', border: '1px solid #ddd' }}
-                                    >
-                                        <option value="svg">SVG Fallback (基础)</option>
-                                        <option value="gemini">Gemini AI (推荐)</option>
-                                        <option value="lionpath">LionPATH (Penn State)</option>
-                                        <option value="sheerid">SheerID 模拟 (通用)</option>
-                                        <option value="puppeteer">Puppeteer (自定义HTML)</option>
-                                    </select>
-                                </div>
-
-                                {backendConfig.aiGenerator?.provider === 'lionpath' && (
-                                    <div className="setting-group" style={{ marginTop: '20px', padding: '15px', background: '#f8f9fa', borderRadius: '8px' }}>
-                                        <h4 style={{ marginBottom: '15px', color: '#1E407C' }}>LionPATH 模板选择 (支持多选)</h4>
-                                        <div className="checkbox-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                                            {lionpathTemplates.map(tmpl => {
-                                                const currentTemplates = backendConfig.aiGenerator?.lionpath?.templates || []
-                                                // Handle legacy single template config migration locally
-                                                const legacyTemplate = backendConfig.aiGenerator?.lionpath?.template
-                                                const isSelected = currentTemplates.includes(tmpl.filename) ||
-                                                    (!currentTemplates.length && legacyTemplate === tmpl.filename)
-
-                                                return (
-                                                    <label key={tmpl.filename} className="checkbox-item" style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px', background: 'white', borderRadius: '4px', border: '1px solid #eee', cursor: 'pointer' }}>
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={!!isSelected}
-                                                            onChange={(e) => {
-                                                                let next = [...currentTemplates]
-                                                                if (!next.length && legacyTemplate) next.push(legacyTemplate)
-
-                                                                if (e.target.checked) {
-                                                                    if (!next.includes(tmpl.filename)) next.push(tmpl.filename)
-                                                                } else {
-                                                                    next = next.filter(t => t !== tmpl.filename)
-                                                                }
-                                                                updateBackendConfig('aiGenerator.lionpath.templates', next)
-                                                            }}
-                                                        />
-                                                        <span style={{ fontSize: '14px' }}>
-                                                            {tmpl.label || tmpl.filename}
-                                                            <div style={{ fontSize: '12px', color: '#666' }}>{tmpl.filename}</div>
-                                                        </span>
-                                                    </label>
-                                                )
-                                            })}
-                                        </div>
-                                        <div className="setting-hint" style={{ marginTop: '10px', color: '#666', fontSize: '12px' }}>
-                                            💡 推荐同时选择 "Browser Screenshot" (课程表) 和 "PSU ID Card" (学生证) 以提高通过率。
-                                        </div>
-                                    </div>
-                                )}
-
-                                {backendConfig.aiGenerator?.provider === 'gemini' && (
-                                    <div className="setting-group">
-                                        <div className="setting-item">
-                                            <label>Gemini API Key</label>
-                                            <input
-                                                type="password"
-                                                value={backendConfig.aiGenerator?.gemini?.apiKey || ''}
-                                                onChange={(e) => updateBackendConfig('aiGenerator.gemini.apiKey', e.target.value)}
-                                                placeholder="API Key"
-                                            />
-                                        </div>
-                                    </div>
-                                )}
-                            </>
-                        ) : (
-                            <div className="placeholder-content"><p>无法连接到后端服务</p></div>
-                        )}
-                    </div>
-                )}
-
                 {/* 基本设置 */}
                 {activeTab === 'basic' && (
                     <div className="settings-section">
@@ -2063,6 +2080,33 @@ function SettingsPage() {
                                 <span className="toggle-slider"></span>
                             </label>
                         </div>
+                        <div className="setting-item toggle-item">
+                            <div className="toggle-info">
+                                <label>延时发货</label>
+                                <span className="toggle-desc">对无卡密商品延迟发送订单完成通知</span>
+                            </div>
+                            <label className="toggle-switch">
+                                <input
+                                    type="checkbox"
+                                    checked={settings.delayedDelivery}
+                                    onChange={(e) => handleChange('delayedDelivery', e.target.checked)}
+                                />
+                                <span className="toggle-slider"></span>
+                            </label>
+                        </div>
+                        {settings.delayedDelivery && (
+                            <div className="setting-item">
+                                <label>延迟时间 (分钟)</label>
+                                <input
+                                    type="number"
+                                    value={settings.delayedDeliveryMinutes}
+                                    onChange={(e) => handleChange('delayedDeliveryMinutes', parseInt(e.target.value) || 5)}
+                                    min={1}
+                                    max={1440}
+                                />
+                                <span className="setting-hint">无卡密商品订单完成后延迟发送通知的时间</span>
+                            </div>
+                        )}
                     </div>
                 )}
 
@@ -2119,6 +2163,30 @@ function SettingsPage() {
                                 placeholder="邮箱密码或授权码"
                             />
                         </div>
+                        <div className="setting-item">
+                            <button
+                                className="btn btn-secondary"
+                                onClick={async () => {
+                                    try {
+                                        const res = await fetch('/api/admin/settings/test-email', {
+                                            method: 'POST',
+                                            headers: { 'Authorization': `Bearer ${token}` }
+                                        })
+                                        const data = await res.json()
+                                        if (res.ok) {
+                                            alert('✅ ' + data.message)
+                                        } else {
+                                            alert('❌ 测试失败: ' + data.error)
+                                        }
+                                    } catch (error) {
+                                        alert('❌ 测试失败: ' + error.message)
+                                    }
+                                }}
+                            >
+                                测试邮件连接
+                            </button>
+                            <span className="setting-hint">先保存设置，再测试连接</span>
+                        </div>
                     </div>
                 )}
             </div>
@@ -2143,7 +2211,7 @@ function AdminDashboard() {
             {/* 侧边栏 */}
             <aside className="admin-sidebar">
                 <div className="sidebar-header">
-                    <span className="sidebar-logo">💎 Kashop</span>
+                    <span className="sidebar-title">管理后台</span>
                     <button className="sidebar-toggle" onClick={() => setSidebarOpen(!sidebarOpen)}>
                         {sidebarOpen ? <FiX /> : <FiMenu />}
                     </button>

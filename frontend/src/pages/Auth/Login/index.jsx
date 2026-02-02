@@ -5,7 +5,7 @@ import { useAuthStore } from '../../../store/authStore'
 import toast from 'react-hot-toast'
 import './Auth.css'
 
-const API_BASE = 'http://localhost:8080/api'
+const API_BASE = '/api'
 
 function Login() {
     const navigate = useNavigate()
@@ -72,7 +72,7 @@ function Login() {
             <div className="auth-container">
                 <div className="auth-header">
                     <h1>欢迎回来</h1>
-                    <p>登录您的 Kashop 账号</p>
+                    <p>登录您的 HaoDongXi 账号</p>
                 </div>
 
                 <form className="auth-form" onSubmit={handleSubmit}>

@@ -20,12 +20,31 @@ function OrderQuery() {
 
         setLoading(true)
 
-        // 模拟查询
-        setTimeout(() => {
-            setLoading(false)
+        try {
+            // 先验证订单是否存在
+            const res = await fetch(`/api/orders/${orderNo.trim()}`)
+            const data = await res.json()
+
+            if (data.error) {
+                toast.error('订单不存在，请检查订单号')
+                setLoading(false)
+                return
+            }
+
+            // 如果填写了邮箱，验证邮箱是否匹配
+            if (email.trim() && data.email !== email.trim()) {
+                toast.error('邮箱与订单不匹配')
+                setLoading(false)
+                return
+            }
+
             // 跳转到订单结果页
             navigate(`/order/${orderNo.trim()}`)
-        }, 800)
+        } catch (error) {
+            toast.error('查询失败，请稍后重试')
+        } finally {
+            setLoading(false)
+        }
     }
 
     return (

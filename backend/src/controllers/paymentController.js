@@ -133,7 +133,7 @@ exports.wechatCallback = async (req, res, next) => {
 async function processPaymentSuccess(orderNo, tradeNo, paymentMethod) {
     const order = await prisma.order.findUnique({
         where: { orderNo },
-        include: { payment: true }
+        include: { payment: true, product: true }
     })
 
     if (!order || order.status === 'COMPLETED') {
@@ -163,8 +163,9 @@ async function processPaymentSuccess(orderNo, tradeNo, paymentMethod) {
     })
 
     // 发放卡密
+    let cards = []
     try {
-        await dispenseCards(order.id, order.productId, order.quantity)
+        cards = await dispenseCards(order.id, order.productId, order.quantity)
 
         // 更新订单为已完成
         await prisma.order.update({
@@ -178,6 +179,43 @@ async function processPaymentSuccess(orderNo, tradeNo, paymentMethod) {
         logger.info(`订单 ${orderNo} 卡密发放成功`)
     } catch (error) {
         logger.error(`订单 ${orderNo} 卡密发放失败:`, error)
+    }
+
+    // 发送邮件通知
+    try {
+        const emailService = require('../services/emailService')
+
+        // 获取延时发送设置
+        const settings = await prisma.setting.findMany({
+            where: { key: { in: ['delayedDelivery', 'delayedDeliveryMinutes'] } }
+        })
+        const delayedDelivery = settings.find(s => s.key === 'delayedDelivery')?.value === 'true'
+        const delayMinutes = parseInt(settings.find(s => s.key === 'delayedDeliveryMinutes')?.value) || 5
+
+        // 获取完整订单信息
+        const fullOrder = await prisma.order.findUnique({
+            where: { id: order.id },
+            include: { product: true, cards: true }
+        })
+
+        // 判断是否需要延时发送（无卡密商品）
+        if (delayedDelivery && (!cards || cards.length === 0)) {
+            logger.info(`订单 ${orderNo} 将在 ${delayMinutes} 分钟后发送邮件通知`)
+            setTimeout(async () => {
+                try {
+                    await emailService.sendOrderCompletedEmail(fullOrder, fullOrder.cards)
+                    logger.info(`订单 ${orderNo} 延时邮件发送成功`)
+                } catch (err) {
+                    logger.error(`订单 ${orderNo} 延时邮件发送失败:`, err)
+                }
+            }, delayMinutes * 60 * 1000)
+        } else {
+            // 立即发送邮件
+            await emailService.sendOrderCompletedEmail(fullOrder, fullOrder.cards)
+            logger.info(`订单 ${orderNo} 邮件通知已发送`)
+        }
+    } catch (error) {
+        logger.error(`订单 ${orderNo} 邮件发送失败:`, error)
     }
 }
 
