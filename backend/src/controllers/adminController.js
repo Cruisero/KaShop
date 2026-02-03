@@ -137,10 +137,23 @@ exports.createProduct = async (req, res, next) => {
             productData.categoryId = categoryId
         }
 
-        // 如果有规格数据，使用嵌套创建
+        // 如果有规格数据，使用嵌套创建，并自动设置商品价格为最低规格价格
         if (variants && variants.length > 0) {
             const validVariants = variants.filter(v => v.name && v.price)
             if (validVariants.length > 0) {
+                // 商品价格自动取最低规格价格
+                const prices = validVariants.map(v => parseFloat(v.price) || 0)
+                const minPrice = Math.min(...prices)
+                productData.price = minPrice
+
+                // 原价取最高规格原价（如果有）
+                const originalPrices = validVariants
+                    .map(v => v.originalPrice ? parseFloat(v.originalPrice) : 0)
+                    .filter(p => p > 0)
+                if (originalPrices.length > 0) {
+                    productData.originalPrice = Math.max(...originalPrices)
+                }
+
                 productData.variants = {
                     create: validVariants.map((v, index) => ({
                         name: v.name,
@@ -209,10 +222,29 @@ exports.updateProduct = async (req, res, next) => {
                     where: { productId: id }
                 })
 
-                // 创建新规格
+                // 创建新规格，并自动设置商品价格
                 if (variants && variants.length > 0) {
                     const validVariants = variants.filter(v => v.name && v.price)
                     if (validVariants.length > 0) {
+                        // 商品价格自动取最低规格价格
+                        const prices = validVariants.map(v => parseFloat(v.price) || 0)
+                        const minPrice = Math.min(...prices)
+
+                        // 原价取最高规格原价（如果有）
+                        const originalPrices = validVariants
+                            .map(v => v.originalPrice ? parseFloat(v.originalPrice) : 0)
+                            .filter(p => p > 0)
+                        const maxOriginalPrice = originalPrices.length > 0 ? Math.max(...originalPrices) : null
+
+                        // 更新商品价格
+                        await tx.product.update({
+                            where: { id },
+                            data: {
+                                price: minPrice,
+                                originalPrice: maxOriginalPrice
+                            }
+                        })
+
                         await tx.productVariant.createMany({
                             data: validVariants.map((v, index) => ({
                                 productId: id,
