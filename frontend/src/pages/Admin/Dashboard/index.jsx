@@ -917,7 +917,6 @@ function ProductsManage() {
                                                 min="0"
                                                 required
                                             />
-                                            <span style={{ fontSize: '0.8rem', color: '#999' }}>手动设置库存，与卡密数量无关</span>
                                         </div>
                                     )}
                                 </div>
