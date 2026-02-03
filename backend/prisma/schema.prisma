@@ -1,6 +1,3 @@
-// Prisma Schema for Kashop
-// 虚拟物品发卡平台数据模型
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,7 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// 用户表
 model User {
   id                String    @id @default(uuid())
   email             String    @unique
@@ -18,24 +14,17 @@ model User {
   username          String?
   role              Role      @default(USER)
   avatar            String?
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
   emailVerified     Boolean   @default(false) @map("email_verified")
   verificationToken String?   @map("verification_token")
   resetToken        String?   @map("reset_token")
   resetTokenExpiry  DateTime? @map("reset_token_expiry")
-  createdAt         DateTime  @default(now()) @map("created_at")
-  updatedAt         DateTime  @updatedAt @map("updated_at")
-  
-  orders    Order[]
-  
+  orders            Order[]
+
   @@map("users")
 }
 
-enum Role {
-  USER
-  ADMIN
-}
-
-// 分类表
 model Category {
   id          String    @id @default(uuid())
   name        String
@@ -45,89 +34,75 @@ model Category {
   status      Status    @default(ACTIVE)
   createdAt   DateTime  @default(now()) @map("created_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")
-  
   products    Product[]
-  
+
   @@map("categories")
 }
 
-// 商品表
 model Product {
-  id            String    @id @default(uuid())
-  categoryId    String?   @map("category_id")
-  name          String
-  description   String?   @db.Text
-  fullDescription String? @db.Text @map("full_description")
-  price         Decimal   @db.Decimal(10, 2)
-  originalPrice Decimal?  @db.Decimal(10, 2) @map("original_price")
-  stock         Int       @default(0)
-  soldCount     Int       @default(0) @map("sold_count")
-  image         String?
-  images        Json?
-  tags          Json?
-  status        Status    @default(ACTIVE)
-  sortOrder     Int       @default(0) @map("sort_order")
-  createdAt     DateTime  @default(now()) @map("created_at")
-  updatedAt     DateTime  @updatedAt @map("updated_at")
-  
-  category      Category? @relation(fields: [categoryId], references: [id])
-  cards         Card[]
-  orders        Order[]
-  variants      ProductVariant[]
-  
+  id              String           @id @default(uuid())
+  categoryId      String?          @map("category_id")
+  name            String
+  description     String?          @db.Text
+  price           Decimal          @db.Decimal(10, 2)
+  originalPrice   Decimal?         @map("original_price") @db.Decimal(10, 2)
+  stock           Int              @default(0)
+  soldCount       Int              @default(0) @map("sold_count")
+  image           String?
+  images          Json?
+  status          Status           @default(ACTIVE)
+  sortOrder       Int              @default(0) @map("sort_order")
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
+  fullDescription String?          @map("full_description") @db.Text
+  tags            Json?
+  cards           Card[]
+  orders          Order[]
+  variants        ProductVariant[]
+  category        Category?        @relation(fields: [categoryId], references: [id])
+
+  @@index([categoryId], map: "idx_category")
   @@map("products")
 }
 
-// 商品规格表
 model ProductVariant {
-  id            String    @id @default(uuid())
-  productId     String    @map("product_id")
-  type          String?   // 规格类型，如"共享"、"独享"，用于分组
-  name          String    // 规格名称，如"月卡"、"季卡"、"年卡"
-  price         Decimal   @db.Decimal(10, 2)
-  originalPrice Decimal?  @db.Decimal(10, 2) @map("original_price")
-  stock         Int       @default(0)
-  sortOrder     Int       @default(0) @map("sort_order")
-  status        Status    @default(ACTIVE)
-  createdAt     DateTime  @default(now()) @map("created_at")
-  updatedAt     DateTime  @updatedAt @map("updated_at")
-  
-  product       Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  id            String   @id @default(uuid())
+  productId     String   @map("product_id")
+  name          String
+  price         Decimal  @db.Decimal(10, 2)
+  originalPrice Decimal? @map("original_price") @db.Decimal(10, 2)
+  stock         Int      @default(0)
+  sortOrder     Int      @default(0) @map("sort_order")
+  status        Status   @default(ACTIVE)
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  type          String?
   cards         Card[]
-  
+  product       Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId], map: "product_variants_product_id_fkey")
   @@map("product_variants")
 }
 
-enum Status {
-  ACTIVE
-  INACTIVE
-}
-
-// 卡密表
 model Card {
-  id        String     @id @default(uuid())
-  productId String     @map("product_id")
-  variantId String?    @map("variant_id")
-  content   String     @db.Text
-  status    CardStatus @default(AVAILABLE)
-  orderId   String?    @map("order_id")
-  soldAt    DateTime?  @map("sold_at")
-  createdAt DateTime   @default(now()) @map("created_at")
-  
-  product   Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+  id        String          @id @default(uuid())
+  productId String          @map("product_id")
+  content   String          @db.Text
+  status    CardStatus      @default(AVAILABLE)
+  orderId   String?         @map("order_id")
+  soldAt    DateTime?       @map("sold_at")
+  createdAt DateTime        @default(now()) @map("created_at")
+  variantId String?         @map("variant_id")
+  order     Order?          @relation(fields: [orderId], references: [id])
+  product   Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
   variant   ProductVariant? @relation(fields: [variantId], references: [id])
-  order     Order?     @relation(fields: [orderId], references: [id])
-  
+
+  @@index([orderId], map: "cards_order_id_fkey")
+  @@index([productId], map: "cards_product_id_fkey")
+  @@index([variantId], map: "cards_variant_id_fkey")
   @@map("cards")
 }
 
-enum CardStatus {
-  AVAILABLE
-  SOLD
-  EXPIRED
-}
-
-// 订单表
 model Order {
   id            String      @id @default(uuid())
   orderNo       String      @unique @map("order_no")
@@ -135,40 +110,32 @@ model Order {
   email         String
   productId     String      @map("product_id")
   productName   String      @map("product_name")
-  variantId     String?     @map("variant_id")
-  variantName   String?     @map("variant_name")
   quantity      Int         @default(1)
-  unitPrice     Decimal     @db.Decimal(10, 2) @map("unit_price")
-  totalAmount   Decimal     @db.Decimal(10, 2) @map("total_amount")
-  usdtAmount    Decimal?    @db.Decimal(10, 2) @map("usdt_amount")
+  unitPrice     Decimal     @map("unit_price") @db.Decimal(10, 2)
+  totalAmount   Decimal     @map("total_amount") @db.Decimal(10, 2)
   status        OrderStatus @default(PENDING)
   paymentMethod String?     @map("payment_method")
   paymentNo     String?     @map("payment_no")
   paidAt        DateTime?   @map("paid_at")
   completedAt   DateTime?   @map("completed_at")
-  cancelledAt   DateTime?   @map("cancelled_at")
   ipAddress     String?     @map("ip_address")
-  userAgent     String?     @db.Text @map("user_agent")
+  userAgent     String?     @map("user_agent") @db.Text
   createdAt     DateTime    @default(now()) @map("created_at")
   updatedAt     DateTime    @updatedAt @map("updated_at")
-  
-  user          User?       @relation(fields: [userId], references: [id])
-  product       Product     @relation(fields: [productId], references: [id])
+  variantId     String?     @map("variant_id")
+  variantName   String?     @map("variant_name")
+  cancelledAt   DateTime?   @map("cancelled_at")
+  usdtAmount    Decimal?    @map("usdt_amount") @db.Decimal(10, 2)
   cards         Card[]
+  product       Product     @relation(fields: [productId], references: [id])
+  user          User?       @relation(fields: [userId], references: [id])
   payment       Payment?
-  
+
+  @@index([productId], map: "orders_product_id_fkey")
+  @@index([userId], map: "orders_user_id_fkey")
   @@map("orders")
 }
 
-enum OrderStatus {
-  PENDING
-  PAID
-  COMPLETED
-  CANCELLED
-  REFUNDED
-}
-
-// 支付记录表
 model Payment {
   id            String        @id @default(uuid())
   orderId       String        @unique @map("order_id")
@@ -179,20 +146,11 @@ model Payment {
   rawData       Json?         @map("raw_data")
   createdAt     DateTime      @default(now()) @map("created_at")
   updatedAt     DateTime      @updatedAt @map("updated_at")
-  
   order         Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  
+
   @@map("payments")
 }
 
-enum PaymentStatus {
-  PENDING
-  SUCCESS
-  FAILED
-  REFUNDED
-}
-
-// 系统设置表
 model Setting {
   id          String   @id @default(uuid())
   key         String   @unique
@@ -200,6 +158,37 @@ model Setting {
   description String?
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
-  
+
   @@map("settings")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum Status {
+  ACTIVE
+  INACTIVE
+}
+
+enum CardStatus {
+  AVAILABLE
+  SOLD
+  EXPIRED
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  COMPLETED
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  REFUNDED
 }

@@ -25,6 +25,7 @@ function ProductDetail() {
     const [loading, setLoading] = useState(true)
     const [activeImageIndex, setActiveImageIndex] = useState(0)
     const [selectedVariant, setSelectedVariant] = useState(null) // 选中的规格
+    const [selectedType, setSelectedType] = useState('') // 选中的规格类型
     const addItem = useCartStore((state) => state.addItem)
 
     useEffect(() => {
@@ -184,32 +185,79 @@ function ProductDetail() {
                     <p className="detail-desc">{product.description}</p>
 
                     {/* 规格选择 */}
-                    {product.variants && product.variants.length > 0 && (
-                        <div className="variant-selector">
-                            <span className="variant-label">规格</span>
-                            <div className="variant-options">
-                                {/* 默认规格 - 商品基础价格 */}
-                                <button
-                                    className={`variant-option ${selectedVariant === null ? 'active' : ''}`}
-                                    onClick={() => setSelectedVariant(null)}
-                                >
-                                    默认
-                                    <span className="variant-price">¥{product.price.toFixed(2)}</span>
-                                </button>
-                                {/* 其他规格 */}
-                                {product.variants.map((variant) => (
-                                    <button
-                                        key={variant.id}
-                                        className={`variant-option ${selectedVariant?.id === variant.id ? 'active' : ''}`}
-                                        onClick={() => setSelectedVariant(variant)}
-                                    >
-                                        {variant.name}
-                                        <span className="variant-price">¥{variant.price.toFixed(2)}</span>
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                    )}
+                    {product.variants && product.variants.length > 0 && (() => {
+                        // 检查是否有类型分组
+                        const hasTypes = product.variants.some(v => v.type && v.type.trim() !== '')
+
+                        if (hasTypes) {
+                            // 按类型分组显示
+                            const types = [...new Set(product.variants.map(v => v.type || '').filter(Boolean))]
+                            // 如果没有选中类型，默认选第一个
+                            const currentType = selectedType || types[0] || ''
+                            const typeVariants = product.variants.filter(v => v.type === currentType)
+
+                            return (
+                                <div className="variant-selector">
+                                    {/* 类型选择 */}
+                                    <div className="variant-row">
+                                        <span className="variant-label">类型</span>
+                                        <div className="variant-options">
+                                            {types.map((type) => (
+                                                <button
+                                                    key={type}
+                                                    className={`variant-option ${currentType === type ? 'active' : ''}`}
+                                                    onClick={() => {
+                                                        setSelectedType(type)
+                                                        // 自动选中该类型的第一个规格
+                                                        const firstVariant = product.variants.find(v => v.type === type)
+                                                        setSelectedVariant(firstVariant || null)
+                                                    }}
+                                                >
+                                                    {type}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* 规格选择 */}
+                                    <div className="variant-row">
+                                        <span className="variant-label">规格</span>
+                                        <div className="variant-options">
+                                            {typeVariants.map((variant) => (
+                                                <button
+                                                    key={variant.id}
+                                                    className={`variant-option ${selectedVariant?.id === variant.id ? 'active' : ''}`}
+                                                    onClick={() => setSelectedVariant(variant)}
+                                                >
+                                                    {variant.name}
+                                                    <span className="variant-price">¥{parseFloat(variant.price).toFixed(2)}</span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            )
+                        } else {
+                            // 无类型分组，直接显示规格
+                            return (
+                                <div className="variant-selector">
+                                    <span className="variant-label">规格</span>
+                                    <div className="variant-options">
+                                        {product.variants.map((variant) => (
+                                            <button
+                                                key={variant.id}
+                                                className={`variant-option ${selectedVariant?.id === variant.id ? 'active' : ''}`}
+                                                onClick={() => setSelectedVariant(variant)}
+                                            >
+                                                {variant.name}
+                                                <span className="variant-price">¥{parseFloat(variant.price).toFixed(2)}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )
+                        }
+                    })()}
 
                     {/* 价格区域 */}
                     <div className="price-section">
