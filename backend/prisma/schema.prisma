@@ -82,6 +82,7 @@ model Product {
 model ProductVariant {
   id            String    @id @default(uuid())
   productId     String    @map("product_id")
+  type          String?   // 规格类型，如"共享"、"独享"，用于分组
   name          String    // 规格名称，如"月卡"、"季卡"、"年卡"
   price         Decimal   @db.Decimal(10, 2)
   originalPrice Decimal?  @db.Decimal(10, 2) @map("original_price")

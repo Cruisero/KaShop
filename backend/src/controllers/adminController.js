@@ -160,6 +160,7 @@ exports.createProduct = async (req, res, next) => {
 
                 productData.variants = {
                     create: validVariants.map((v, index) => ({
+                        type: v.type || null,
                         name: v.name,
                         price: parseFloat(v.price) || 0,
                         originalPrice: v.originalPrice ? parseFloat(v.originalPrice) : null,
@@ -256,6 +257,7 @@ exports.updateProduct = async (req, res, next) => {
                         await tx.productVariant.createMany({
                             data: validVariants.map((v, index) => ({
                                 productId: id,
+                                type: v.type || null,
                                 name: v.name,
                                 price: parseFloat(v.price) || 0,
                                 originalPrice: v.originalPrice ? parseFloat(v.originalPrice) : null,

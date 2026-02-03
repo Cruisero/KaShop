@@ -507,11 +507,14 @@ function ProductsManage() {
             images: product.images || [],
             tags: (product.tags || []).join(', '),
             variants: (product.variants || []).map(v => ({
+                type: v.type || '',
                 name: v.name,
                 price: v.price.toString(),
                 originalPrice: v.originalPrice?.toString() || '',
                 stock: v.stock?.toString() || '0'
             })),
+            // 自动检测是否启用规格类型分组（如果有任何规格带 type 则启用）
+            enableVariantTypes: (product.variants || []).some(v => v.type && v.type.trim() !== ''),
             status: product.status
         })
         fetchCategories()
@@ -797,86 +800,261 @@ function ProductsManage() {
 
                             {/* 商品规格 - 放在价格上方 */}
                             <div className="form-group variants-section">
-                                <label>
-                                    商品规格
-                                    <span style={{ color: '#999', fontWeight: 'normal', marginLeft: 8 }}>
-                                        (可选，如：月卡、季卡、年卡，不同规格不同价格)
+                                <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                    <span>
+                                        商品规格
+                                        <span style={{ color: '#999', fontWeight: 'normal', marginLeft: 8 }}>
+                                            (可选，如：月卡、季卡、年卡)
+                                        </span>
                                     </span>
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 'normal', fontSize: '0.9rem', cursor: 'pointer' }}>
+                                        <input
+                                            type="checkbox"
+                                            checked={formData.enableVariantTypes || false}
+                                            onChange={(e) => {
+                                                setFormData({ ...formData, enableVariantTypes: e.target.checked })
+                                            }}
+                                            style={{ width: 16, height: 16 }}
+                                        />
+                                        启用规格类型分组
+                                    </label>
                                 </label>
 
-                                {formData.variants.map((variant, index) => (
-                                    <div key={index} className="variant-row">
-                                        <input
-                                            type="text"
-                                            placeholder="规格名称"
-                                            value={variant.name}
-                                            onChange={(e) => {
-                                                const newVariants = [...formData.variants]
-                                                newVariants[index].name = e.target.value
-                                                setFormData({ ...formData, variants: newVariants })
-                                            }}
-                                            style={{ flex: 2 }}
-                                        />
-                                        <input
-                                            type="number"
-                                            placeholder="价格"
-                                            value={variant.price}
-                                            onChange={(e) => {
-                                                const newVariants = [...formData.variants]
-                                                newVariants[index].price = e.target.value
-                                                setFormData({ ...formData, variants: newVariants })
-                                            }}
-                                            step="0.01"
-                                            style={{ flex: 1 }}
-                                        />
-                                        <input
-                                            type="number"
-                                            placeholder="原价"
-                                            value={variant.originalPrice}
-                                            onChange={(e) => {
-                                                const newVariants = [...formData.variants]
-                                                newVariants[index].originalPrice = e.target.value
-                                                setFormData({ ...formData, variants: newVariants })
-                                            }}
-                                            step="0.01"
-                                            style={{ flex: 1 }}
-                                        />
-                                        <input
-                                            type="number"
-                                            placeholder="库存"
-                                            value={variant.stock}
-                                            onChange={(e) => {
-                                                const newVariants = [...formData.variants]
-                                                newVariants[index].stock = e.target.value
-                                                setFormData({ ...formData, variants: newVariants })
-                                            }}
-                                            style={{ flex: 1 }}
-                                        />
+                                {formData.enableVariantTypes ? (
+                                    /* 带类型分组的规格 */
+                                    <>
+                                        {(() => {
+                                            // 按类型分组规格
+                                            const types = [...new Set(formData.variants.map(v => v.type || '默认').filter(Boolean))]
+                                            if (types.length === 0) types.push('默认')
+
+                                            return types.map((typeName, typeIndex) => (
+                                                <div key={typeIndex} className="variant-type-group" style={{
+                                                    border: '1px solid var(--border-color)',
+                                                    borderRadius: 8,
+                                                    padding: 16,
+                                                    marginBottom: 12,
+                                                    background: 'var(--card-bg)'
+                                                }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+                                                        <span style={{ fontWeight: 500 }}>类型:</span>
+                                                        <input
+                                                            type="text"
+                                                            value={typeName === '默认' ? '' : typeName}
+                                                            placeholder="输入类型名称，如：共享、独享"
+                                                            onChange={(e) => {
+                                                                const oldType = typeName
+                                                                const newType = e.target.value || '默认'
+                                                                const newVariants = formData.variants.map(v =>
+                                                                    (v.type || '默认') === oldType ? { ...v, type: newType === '默认' ? '' : newType } : v
+                                                                )
+                                                                setFormData({ ...formData, variants: newVariants })
+                                                            }}
+                                                            style={{ flex: 1 }}
+                                                        />
+                                                        {types.length > 1 && (
+                                                            <button
+                                                                type="button"
+                                                                className="remove-variant-btn"
+                                                                onClick={() => {
+                                                                    const newVariants = formData.variants.filter(v => (v.type || '默认') !== typeName)
+                                                                    setFormData({ ...formData, variants: newVariants })
+                                                                }}
+                                                                title="删除此类型"
+                                                            >
+                                                                ✕
+                                                            </button>
+                                                        )}
+                                                    </div>
+
+                                                    {/* 该类型下的规格列表 */}
+                                                    {formData.variants
+                                                        .map((v, i) => ({ ...v, originalIndex: i }))
+                                                        .filter(v => (v.type || '默认') === typeName)
+                                                        .map((variant) => (
+                                                            <div key={variant.originalIndex} className="variant-row">
+                                                                <input
+                                                                    type="text"
+                                                                    placeholder="规格名称"
+                                                                    value={variant.name}
+                                                                    onChange={(e) => {
+                                                                        const newVariants = [...formData.variants]
+                                                                        newVariants[variant.originalIndex].name = e.target.value
+                                                                        setFormData({ ...formData, variants: newVariants })
+                                                                    }}
+                                                                    style={{ flex: 2 }}
+                                                                />
+                                                                <input
+                                                                    type="number"
+                                                                    placeholder="价格"
+                                                                    value={variant.price}
+                                                                    onChange={(e) => {
+                                                                        const newVariants = [...formData.variants]
+                                                                        newVariants[variant.originalIndex].price = e.target.value
+                                                                        setFormData({ ...formData, variants: newVariants })
+                                                                    }}
+                                                                    step="0.01"
+                                                                    style={{ flex: 1 }}
+                                                                />
+                                                                <input
+                                                                    type="number"
+                                                                    placeholder="原价"
+                                                                    value={variant.originalPrice}
+                                                                    onChange={(e) => {
+                                                                        const newVariants = [...formData.variants]
+                                                                        newVariants[variant.originalIndex].originalPrice = e.target.value
+                                                                        setFormData({ ...formData, variants: newVariants })
+                                                                    }}
+                                                                    step="0.01"
+                                                                    style={{ flex: 1 }}
+                                                                />
+                                                                <input
+                                                                    type="number"
+                                                                    placeholder="库存"
+                                                                    value={variant.stock}
+                                                                    onChange={(e) => {
+                                                                        const newVariants = [...formData.variants]
+                                                                        newVariants[variant.originalIndex].stock = e.target.value
+                                                                        setFormData({ ...formData, variants: newVariants })
+                                                                    }}
+                                                                    style={{ flex: 1 }}
+                                                                />
+                                                                <button
+                                                                    type="button"
+                                                                    className="remove-variant-btn"
+                                                                    onClick={() => {
+                                                                        const newVariants = formData.variants.filter((_, i) => i !== variant.originalIndex)
+                                                                        setFormData({ ...formData, variants: newVariants })
+                                                                    }}
+                                                                >
+                                                                    ✕
+                                                                </button>
+                                                            </div>
+                                                        ))}
+
+                                                    <button
+                                                        type="button"
+                                                        className="add-variant-btn"
+                                                        style={{ marginTop: 8 }}
+                                                        onClick={() => {
+                                                            setFormData({
+                                                                ...formData,
+                                                                variants: [...formData.variants, {
+                                                                    type: typeName === '默认' ? '' : typeName,
+                                                                    name: '',
+                                                                    price: '',
+                                                                    originalPrice: '',
+                                                                    stock: '0'
+                                                                }]
+                                                            })
+                                                        }}
+                                                    >
+                                                        + 添加规格
+                                                    </button>
+                                                </div>
+                                            ))
+                                        })()}
+
                                         <button
                                             type="button"
-                                            className="remove-variant-btn"
+                                            className="add-variant-btn"
+                                            style={{ background: 'transparent', border: '2px dashed var(--border-color)', color: 'var(--primary-color)' }}
                                             onClick={() => {
-                                                const newVariants = formData.variants.filter((_, i) => i !== index)
-                                                setFormData({ ...formData, variants: newVariants })
+                                                const existingTypes = [...new Set(formData.variants.map(v => v.type || '默认'))]
+                                                const newTypeName = `类型${existingTypes.length + 1}`
+                                                setFormData({
+                                                    ...formData,
+                                                    variants: [...formData.variants, {
+                                                        type: newTypeName,
+                                                        name: '',
+                                                        price: '',
+                                                        originalPrice: '',
+                                                        stock: '0'
+                                                    }]
+                                                })
                                             }}
                                         >
-                                            ✕
+                                            + 添加类型
                                         </button>
-                                    </div>
-                                ))}
+                                    </>
+                                ) : (
+                                    /* 无类型分组的简单规格 */
+                                    <>
+                                        {formData.variants.map((variant, index) => (
+                                            <div key={index} className="variant-row">
+                                                <input
+                                                    type="text"
+                                                    placeholder="规格名称"
+                                                    value={variant.name}
+                                                    onChange={(e) => {
+                                                        const newVariants = [...formData.variants]
+                                                        newVariants[index].name = e.target.value
+                                                        setFormData({ ...formData, variants: newVariants })
+                                                    }}
+                                                    style={{ flex: 2 }}
+                                                />
+                                                <input
+                                                    type="number"
+                                                    placeholder="价格"
+                                                    value={variant.price}
+                                                    onChange={(e) => {
+                                                        const newVariants = [...formData.variants]
+                                                        newVariants[index].price = e.target.value
+                                                        setFormData({ ...formData, variants: newVariants })
+                                                    }}
+                                                    step="0.01"
+                                                    style={{ flex: 1 }}
+                                                />
+                                                <input
+                                                    type="number"
+                                                    placeholder="原价"
+                                                    value={variant.originalPrice}
+                                                    onChange={(e) => {
+                                                        const newVariants = [...formData.variants]
+                                                        newVariants[index].originalPrice = e.target.value
+                                                        setFormData({ ...formData, variants: newVariants })
+                                                    }}
+                                                    step="0.01"
+                                                    style={{ flex: 1 }}
+                                                />
+                                                <input
+                                                    type="number"
+                                                    placeholder="库存"
+                                                    value={variant.stock}
+                                                    onChange={(e) => {
+                                                        const newVariants = [...formData.variants]
+                                                        newVariants[index].stock = e.target.value
+                                                        setFormData({ ...formData, variants: newVariants })
+                                                    }}
+                                                    style={{ flex: 1 }}
+                                                />
+                                                <button
+                                                    type="button"
+                                                    className="remove-variant-btn"
+                                                    onClick={() => {
+                                                        const newVariants = formData.variants.filter((_, i) => i !== index)
+                                                        setFormData({ ...formData, variants: newVariants })
+                                                    }}
+                                                >
+                                                    ✕
+                                                </button>
+                                            </div>
+                                        ))}
 
-                                <button
-                                    type="button"
-                                    className="add-variant-btn"
-                                    onClick={() => {
-                                        setFormData({
-                                            ...formData,
-                                            variants: [...formData.variants, { name: '', price: '', originalPrice: '', stock: '0' }]
-                                        })
-                                    }}
-                                >
-                                    + 添加规格
-                                </button>
+                                        <button
+                                            type="button"
+                                            className="add-variant-btn"
+                                            onClick={() => {
+                                                setFormData({
+                                                    ...formData,
+                                                    variants: [...formData.variants, { name: '', price: '', originalPrice: '', stock: '0' }]
+                                                })
+                                            }}
+                                        >
+                                            + 添加规格
+                                        </button>
+                                    </>
+                                )}
                             </div>
 
                             {/* 无规格时显示价格和库存输入 */}
