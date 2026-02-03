@@ -15,6 +15,8 @@ import UserCenter from './pages/User'
 import AdminDashboard from './pages/Admin/Dashboard'
 import Search from './pages/Search'
 import VerifyEmail from './pages/VerifyEmail'
+import ForgotPassword from './pages/Auth/ForgotPassword'
+import ResetPassword from './pages/Auth/ResetPassword'
 import NotFound from './pages/NotFound'
 import { useThemeStore } from './store/themeStore'
 import { useAuthStore } from './store/authStore'
@@ -96,11 +98,33 @@ function EmailVerificationBanner() {
 
 function App() {
     const initTheme = useThemeStore((state) => state.initTheme)
+    const { isAuthenticated, token, updateUser, logout } = useAuthStore()
 
     // 初始化主题
     useEffect(() => {
         initTheme()
     }, [initTheme])
+
+    // 刷新用户信息（确保 emailVerified 等状态是最新的）
+    useEffect(() => {
+        if (isAuthenticated && token) {
+            fetch('/api/auth/me', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.user) {
+                        updateUser(data.user)
+                    } else if (data.error) {
+                        // Token 过期或无效，退出登录
+                        logout()
+                    }
+                })
+                .catch(() => {
+                    // 网络错误，不做处理
+                })
+        }
+    }, [isAuthenticated, token])
 
     return (
         <Router>
@@ -119,8 +143,14 @@ function App() {
                         <Route path="/login" element={<Login />} />
                         <Route path="/register" element={<Register />} />
                         <Route path="/verify-email" element={<VerifyEmail />} />
+                        <Route path="/forgot-password" element={<ForgotPassword />} />
+                        <Route path="/reset-password" element={<ResetPassword />} />
                         <Route path="/user/*" element={<UserCenter />} />
-                        <Route path="/admin/*" element={<AdminDashboard />} />
+                        <Route path="/admin/*" element={
+                            useAuthStore.getState().user?.role === 'ADMIN'
+                                ? <AdminDashboard />
+                                : <NotFound />
+                        } />
                         <Route path="/search" element={<Search />} />
                         <Route path="*" element={<NotFound />} />
                     </Routes>

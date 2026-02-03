@@ -64,64 +64,87 @@ const sendOrderCompletedEmail = async (order, cards) => {
         // 构建卡密列表 HTML
         const cardsHtml = cards && cards.length > 0
             ? cards.map((card, index) => `
-                <div style="background: #f8f9fa; padding: 12px 16px; margin: 8px 0; border-radius: 8px; font-family: monospace; border-left: 4px solid #ef4444;">
-                    <strong>卡密 ${index + 1}:</strong> ${card.content}
+                <div style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); padding: 14px 18px; margin: 10px 0; border-radius: 10px; font-family: 'Monaco', 'Menlo', monospace; border-left: 4px solid #0ea5e9; font-size: 14px;">
+                    <span style="color: #0369a1; font-weight: 600;">卡密 ${index + 1}:</span>
+                    <span style="color: #1e293b; margin-left: 8px;">${card.content}</span>
                 </div>
             `).join('')
-            : '<p style="color: #666;">此商品无卡密信息，请等待商家处理。</p>'
+            : '<p style="color: #64748b; text-align: center; padding: 20px;">此商品无卡密信息，请等待商家处理。</p>'
 
         // 邮件内容
         const mailOptions = {
             from: `"${config.senderName || 'HaoDongXi'}" <${config.smtpUser}>`,
             to: order.email,
-            subject: `【订单完成】您的订单 ${order.orderNo} 已完成`,
+            subject: `【订单完成】您的订单 ${order.orderNo} 已完成 - HaoDongXi`,
             html: `
                 <!DOCTYPE html>
                 <html>
                 <head>
                     <meta charset="utf-8">
-                    <style>
-                        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; margin: 0; padding: 20px; }
-                        .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
-                        .header { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); padding: 30px; text-align: center; }
-                        .header h1 { color: white; margin: 0; font-size: 24px; }
-                        .content { padding: 30px; }
-                        .order-info { background: #f8f9fa; padding: 20px; border-radius: 12px; margin-bottom: 24px; }
-                        .order-info p { margin: 8px 0; color: #333; }
-                        .cards-section { margin-top: 24px; }
-                        .cards-section h3 { color: #333; margin-bottom: 16px; }
-                        .footer { text-align: center; padding: 20px; color: #999; font-size: 12px; border-top: 1px solid #eee; }
-                    </style>
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
                 </head>
-                <body>
-                    <div class="container">
-                        <div class="header">
-                            <h1>🎉 订单完成通知</h1>
+                <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif; background: #f1f5f9; margin: 0; padding: 30px 15px;">
+                    <div style="max-width: 580px; margin: 0 auto; background: white; border-radius: 20px; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.08);">
+                        
+                        <!-- Header -->
+                        <div style="background: linear-gradient(135deg, #0ea5e9 0%, #06b6d4 50%, #14b8a6 100%); padding: 40px 30px; text-align: center;">
+                            <div style="font-size: 48px; margin-bottom: 12px;">✨</div>
+                            <h1 style="color: white; margin: 0; font-size: 26px; font-weight: 600; letter-spacing: 1px;">订单完成通知</h1>
+                            <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0; font-size: 14px;">感谢您的购买！</p>
                         </div>
-                        <div class="content">
-                            <p>您好！</p>
-                            <p>您的订单已完成，以下是订单详情：</p>
+                        
+                        <!-- Content -->
+                        <div style="padding: 35px 30px;">
+                            <p style="color: #334155; font-size: 16px; margin: 0 0 20px; line-height: 1.6;">您好！</p>
+                            <p style="color: #475569; font-size: 15px; margin: 0 0 25px; line-height: 1.6;">您的订单已成功完成，以下是详细信息：</p>
                             
-                            <div class="order-info">
-                                <p><strong>订单号：</strong>${order.orderNo}</p>
-                                <p><strong>商品：</strong>${order.product?.name || '商品'}</p>
-                                <p><strong>数量：</strong>${order.quantity}</p>
-                                <p><strong>金额：</strong>¥${order.totalAmount}</p>
-                                <p><strong>下单时间：</strong>${new Date(order.createdAt).toLocaleString('zh-CN')}</p>
+                            <!-- Order Info Card -->
+                            <div style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); padding: 24px; border-radius: 14px; margin-bottom: 28px; border: 1px solid #e2e8f0;">
+                                <table style="width: 100%; border-collapse: collapse;">
+                                    <tr>
+                                        <td style="padding: 10px 0; color: #64748b; font-size: 14px; border-bottom: 1px solid #e2e8f0;">订单号</td>
+                                        <td style="padding: 10px 0; color: #1e293b; font-size: 14px; text-align: right; font-weight: 600; border-bottom: 1px solid #e2e8f0;">${order.orderNo}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 10px 0; color: #64748b; font-size: 14px; border-bottom: 1px solid #e2e8f0;">商品名称</td>
+                                        <td style="padding: 10px 0; color: #1e293b; font-size: 14px; text-align: right; font-weight: 500; border-bottom: 1px solid #e2e8f0;">${order.product?.name || order.productName || '商品'}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 10px 0; color: #64748b; font-size: 14px; border-bottom: 1px solid #e2e8f0;">购买数量</td>
+                                        <td style="padding: 10px 0; color: #1e293b; font-size: 14px; text-align: right; font-weight: 500; border-bottom: 1px solid #e2e8f0;">${order.quantity} 件</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 10px 0; color: #64748b; font-size: 14px; border-bottom: 1px solid #e2e8f0;">支付金额</td>
+                                        <td style="padding: 10px 0; color: #0ea5e9; font-size: 18px; text-align: right; font-weight: 700; border-bottom: 1px solid #e2e8f0;">¥${order.totalAmount}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 10px 0; color: #64748b; font-size: 14px;">下单时间</td>
+                                        <td style="padding: 10px 0; color: #64748b; font-size: 13px; text-align: right;">${new Date(order.createdAt).toLocaleString('zh-CN')}</td>
+                                    </tr>
+                                </table>
                             </div>
                             
-                            <div class="cards-section">
-                                <h3>📦 您购买的卡密</h3>
+                            <!-- Cards Section -->
+                            <div style="margin-top: 28px;">
+                                <h3 style="color: #1e293b; font-size: 17px; margin: 0 0 16px; display: flex; align-items: center;">
+                                    <span style="display: inline-block; width: 4px; height: 20px; background: linear-gradient(180deg, #0ea5e9, #14b8a6); border-radius: 2px; margin-right: 10px;"></span>
+                                    您购买的卡密
+                                </h3>
                                 ${cardsHtml}
                             </div>
                             
-                            <p style="margin-top: 24px; color: #666;">
-                                请妥善保管以上信息，如有问题请联系客服。
-                            </p>
+                            <!-- Notice -->
+                            <div style="margin-top: 28px; padding: 16px 20px; background: #fffbeb; border-radius: 10px; border: 1px solid #fef3c7;">
+                                <p style="color: #92400e; font-size: 13px; margin: 0; line-height: 1.6;">
+                                    ⚠️ 请妥善保管以上卡密信息，避免泄露。如有问题请联系客服。
+                                </p>
+                            </div>
                         </div>
-                        <div class="footer">
-                            <p>此邮件由系统自动发送，请勿回复。</p>
-                            <p>© ${new Date().getFullYear()} HaoDongXi</p>
+                        
+                        <!-- Footer -->
+                        <div style="text-align: center; padding: 25px 30px; background: #f8fafc; border-top: 1px solid #e2e8f0;">
+                            <p style="color: #94a3b8; font-size: 12px; margin: 0 0 8px;">此邮件由系统自动发送，请勿直接回复</p>
+                            <p style="color: #64748b; font-size: 13px; margin: 0; font-weight: 500;">© ${new Date().getFullYear()} HaoDongXi · 好东西购物平台</p>
                         </div>
                     </div>
                 </body>
@@ -160,38 +183,44 @@ const sendVerificationEmail = async (user, token, baseUrl = 'http://localhost:30
                 <html>
                 <head>
                     <meta charset="utf-8">
-                    <style>
-                        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; margin: 0; padding: 20px; }
-                        .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
-                        .header { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); padding: 30px; text-align: center; }
-                        .header h1 { color: white; margin: 0; font-size: 24px; }
-                        .content { padding: 30px; text-align: center; }
-                        .verify-btn { display: inline-block; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; padding: 15px 40px; text-decoration: none; border-radius: 8px; font-weight: bold; margin: 20px 0; }
-                        .link-text { word-break: break-all; background: #f8f9fa; padding: 15px; border-radius: 8px; font-size: 12px; color: #666; }
-                        .footer { text-align: center; padding: 20px; color: #999; font-size: 12px; border-top: 1px solid #eee; }
-                    </style>
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
                 </head>
-                <body>
-                    <div class="container">
-                        <div class="header">
-                            <h1>📧 邮箱验证</h1>
+                <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif; background: #f1f5f9; margin: 0; padding: 30px 15px;">
+                    <div style="max-width: 580px; margin: 0 auto; background: white; border-radius: 20px; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.08);">
+                        
+                        <!-- Header -->
+                        <div style="background: linear-gradient(135deg, #0ea5e9 0%, #06b6d4 50%, #14b8a6 100%); padding: 40px 30px; text-align: center;">
+                            <div style="font-size: 48px; margin-bottom: 12px;">📧</div>
+                            <h1 style="color: white; margin: 0; font-size: 26px; font-weight: 600; letter-spacing: 1px;">邮箱验证</h1>
+                            <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0; font-size: 14px;">验证您的账号邮箱</p>
                         </div>
-                        <div class="content">
-                            <p>您好，${user.username || user.email}！</p>
-                            <p>感谢您注册 HaoDongXi。请点击下方按钮验证您的邮箱：</p>
+                        
+                        <!-- Content -->
+                        <div style="padding: 35px 30px; text-align: center;">
+                            <p style="color: #334155; font-size: 16px; margin: 0 0 20px; line-height: 1.6;">您好，${user.username || user.email}！</p>
+                            <p style="color: #475569; font-size: 15px; margin: 0 0 25px; line-height: 1.6;">感谢您注册 HaoDongXi。请点击下方按钮验证您的邮箱：</p>
                             
-                            <a href="${verifyUrl}" class="verify-btn">验证邮箱</a>
+                            <!-- Verify Button -->
+                            <div style="margin: 32px 0;">
+                                <a href="${verifyUrl}" style="display: inline-block; background: linear-gradient(135deg, #0ea5e9 0%, #14b8a6 100%); color: white; padding: 16px 48px; text-decoration: none; border-radius: 12px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 15px rgba(14, 165, 233, 0.3);">验证邮箱</a>
+                            </div>
                             
-                            <p style="color: #666; font-size: 14px;">如果按钮无法点击，请复制以下链接到浏览器打开：</p>
-                            <div class="link-text">${verifyUrl}</div>
+                            <!-- Fallback Link -->
+                            <div style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); padding: 20px; border-radius: 12px; margin: 24px 0; border: 1px solid #e2e8f0; text-align: left;">
+                                <p style="color: #64748b; font-size: 13px; margin: 0 0 10px;">如果按钮无法点击，请复制以下链接到浏览器打开：</p>
+                                <p style="word-break: break-all; color: #0ea5e9; font-size: 12px; margin: 0; line-height: 1.6;">${verifyUrl}</p>
+                            </div>
                             
-                            <p style="color: #999; font-size: 12px; margin-top: 20px;">
+                            <!-- Notice -->
+                            <p style="color: #94a3b8; font-size: 13px; margin-top: 20px; line-height: 1.6;">
                                 此链接24小时内有效。如非本人操作，请忽略此邮件。
                             </p>
                         </div>
-                        <div class="footer">
-                            <p>此邮件由系统自动发送，请勿回复。</p>
-                            <p>© ${new Date().getFullYear()} HaoDongXi</p>
+                        
+                        <!-- Footer -->
+                        <div style="text-align: center; padding: 25px 30px; background: #f8fafc; border-top: 1px solid #e2e8f0;">
+                            <p style="color: #94a3b8; font-size: 12px; margin: 0 0 8px;">此邮件由系统自动发送，请勿直接回复</p>
+                            <p style="color: #64748b; font-size: 13px; margin: 0; font-weight: 500;">© ${new Date().getFullYear()} HaoDongXi · 好东西购物平台</p>
                         </div>
                     </div>
                 </body>
@@ -208,17 +237,99 @@ const sendVerificationEmail = async (user, token, baseUrl = 'http://localhost:30
     }
 }
 
-// 测试邮件连接
+// 测试邮件连接（带超时）
 const testEmailConnection = async () => {
     try {
         const transporter = await createTransporter()
         if (!transporter) {
-            return { success: false, error: '邮件配置不完整' }
+            return { success: false, error: '邮件配置不完整，请填写 SMTP 服务器、用户名和密码' }
         }
 
-        await transporter.verify()
+        // 添加超时机制
+        const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('连接超时，请检查 SMTP 服务器地址和端口是否正确，或者服务器是否阻止了 SMTP 端口')), 10000)
+        )
+
+        await Promise.race([transporter.verify(), timeoutPromise])
         return { success: true }
     } catch (error) {
+        return { success: false, error: error.message }
+    }
+}
+
+// 发送密码重置邮件
+const sendPasswordResetEmail = async (user, resetToken, baseUrl) => {
+    try {
+        const config = await getEmailConfig()
+        const transporter = await createTransporter()
+
+        if (!transporter) {
+            return { success: false, reason: 'config_missing' }
+        }
+
+        const resetUrl = `${baseUrl}/reset-password?token=${resetToken}`
+
+        const mailOptions = {
+            from: `"${config.senderName || 'HaoDongXi'}" <${config.smtpUser}>`,
+            to: user.email,
+            subject: '【密码重置】重置您的 HaoDongXi 账号密码',
+            html: `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="utf-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                </head>
+                <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif; background: #f1f5f9; margin: 0; padding: 30px 15px;">
+                    <div style="max-width: 580px; margin: 0 auto; background: white; border-radius: 20px; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.08);">
+                        
+                        <!-- Header -->
+                        <div style="background: linear-gradient(135deg, #0ea5e9 0%, #06b6d4 50%, #14b8a6 100%); padding: 40px 30px; text-align: center;">
+                            <div style="font-size: 48px; margin-bottom: 12px;">🔐</div>
+                            <h1 style="color: white; margin: 0; font-size: 26px; font-weight: 600; letter-spacing: 1px;">密码重置</h1>
+                            <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0; font-size: 14px;">安全重置您的账号密码</p>
+                        </div>
+                        
+                        <!-- Content -->
+                        <div style="padding: 35px 30px;">
+                            <p style="color: #334155; font-size: 16px; margin: 0 0 20px; line-height: 1.6;">您好，${user.username || user.email.split('@')[0]}！</p>
+                            <p style="color: #475569; font-size: 15px; margin: 0 0 25px; line-height: 1.6;">我们收到了您重置密码的请求。请点击下面的按钮设置新密码：</p>
+                            
+                            <!-- Reset Button -->
+                            <div style="text-align: center; margin: 32px 0;">
+                                <a href="${resetUrl}" style="display: inline-block; background: linear-gradient(135deg, #0ea5e9 0%, #14b8a6 100%); color: white; padding: 16px 48px; text-decoration: none; border-radius: 12px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 15px rgba(14, 165, 233, 0.3);">重置密码</a>
+                            </div>
+                            
+                            <!-- Fallback Link -->
+                            <div style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); padding: 20px; border-radius: 12px; margin: 24px 0; border: 1px solid #e2e8f0;">
+                                <p style="color: #64748b; font-size: 13px; margin: 0 0 10px;">如果按钮无法点击，请复制以下链接到浏览器：</p>
+                                <p style="word-break: break-all; color: #0ea5e9; font-size: 12px; margin: 0; line-height: 1.6;">${resetUrl}</p>
+                            </div>
+                            
+                            <!-- Warning -->
+                            <div style="margin-top: 24px; padding: 16px 20px; background: #fffbeb; border-radius: 10px; border: 1px solid #fef3c7;">
+                                <p style="color: #92400e; font-size: 13px; margin: 0; line-height: 1.6;">
+                                    ⚠️ 此链接将在 30 分钟后失效。如果您没有请求重置密码，请忽略此邮件。
+                                </p>
+                            </div>
+                        </div>
+                        
+                        <!-- Footer -->
+                        <div style="text-align: center; padding: 25px 30px; background: #f8fafc; border-top: 1px solid #e2e8f0;">
+                            <p style="color: #94a3b8; font-size: 12px; margin: 0 0 8px;">此邮件由系统自动发送，请勿直接回复</p>
+                            <p style="color: #64748b; font-size: 13px; margin: 0; font-weight: 500;">© ${new Date().getFullYear()} HaoDongXi · 好东西购物平台</p>
+                        </div>
+                    </div>
+                </body>
+                </html>
+            `
+        }
+
+        const result = await transporter.sendMail(mailOptions)
+        console.log('密码重置邮件发送成功:', result.messageId)
+        return { success: true, messageId: result.messageId }
+    } catch (error) {
+        console.error('密码重置邮件发送失败:', error)
         return { success: false, error: error.message }
     }
 }
@@ -227,5 +338,7 @@ module.exports = {
     getEmailConfig,
     sendOrderCompletedEmail,
     sendVerificationEmail,
+    sendPasswordResetEmail,
     testEmailConnection
 }
+

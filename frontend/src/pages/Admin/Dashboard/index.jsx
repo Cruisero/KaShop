@@ -321,7 +321,7 @@ function DashboardHome() {
                             <tr key={order.orderNo}>
                                 <td className="order-no">{order.orderNo}</td>
                                 <td>{order.productName}</td>
-                                <td>¥{parseFloat(order.totalAmount).toFixed(2)}</td>
+                                <td>¥{parseFloat(order.amount || order.totalAmount || 0).toFixed(2)}</td>
                                 <td>
                                     <span className={`status-badge ${order.status?.toLowerCase()}`}>
                                         {order.status === 'COMPLETED' ? '已完成' : order.status === 'PENDING' ? '待支付' : order.status}
@@ -354,6 +354,7 @@ function ProductsManage() {
     const [products, setProducts] = useState([]) // 从 API 获取的商品
     const [categories, setCategories] = useState([]) // 分类列表
     const [loading, setLoading] = useState(true)
+    const [stockMode, setStockMode] = useState('auto') // 'auto' = 库存=卡密数量, 'manual' = 手动设置
     const [newCategory, setNewCategory] = useState({ name: '', icon: '📦', description: '' })
     const [formData, setFormData] = useState({
         name: '',
@@ -369,10 +370,25 @@ function ProductsManage() {
         status: 'active'
     })
 
-    // 从 API 获取商品列表
+    // 从 API 获取商品列表和设置
     useEffect(() => {
         fetchProducts()
+        fetchStockMode()
     }, [])
+
+    const fetchStockMode = async () => {
+        try {
+            const res = await fetch('/api/admin/settings', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            })
+            const data = await res.json()
+            if (data.settings?.stockMode) {
+                setStockMode(data.settings.stockMode)
+            }
+        } catch (error) {
+            console.error('获取设置失败:', error)
+        }
+    }
 
     const fetchProducts = async () => {
         try {
@@ -802,18 +818,21 @@ function ProductsManage() {
                                         step="0.01"
                                     />
                                 </div>
-                                <div className="form-group">
-                                    <label>库存 *</label>
-                                    <input
-                                        type="number"
-                                        name="stock"
-                                        value={formData.stock}
-                                        onChange={handleChange}
-                                        placeholder="0"
-                                        min="0"
-                                        required
-                                    />
-                                </div>
+                                {stockMode === 'manual' && (
+                                    <div className="form-group">
+                                        <label>库存 *</label>
+                                        <input
+                                            type="number"
+                                            name="stock"
+                                            value={formData.stock}
+                                            onChange={handleChange}
+                                            placeholder="0"
+                                            min="0"
+                                            required
+                                        />
+                                        <span style={{ fontSize: '0.8rem', color: '#999' }}>手动设置库存，与卡密数量无关</span>
+                                    </div>
+                                )}
                             </div>
                             <div className="form-group">
                                 <label>商品类别 *</label>
@@ -1112,9 +1131,16 @@ function ProductsManage() {
 // 订单管理
 function OrdersManage() {
     const token = useAuthStore(state => state.token)
+    const { showToast, showConfirm } = useToast()
     const [orders, setOrders] = useState([])
     const [loading, setLoading] = useState(true)
     const [statusFilter, setStatusFilter] = useState('all')
+    const [shipping, setShipping] = useState(null) // 正在发货的订单ID
+
+    // 卡密输入弹窗状态
+    const [showCardInputModal, setShowCardInputModal] = useState(false)
+    const [cardInputOrder, setCardInputOrder] = useState(null)
+    const [cardInputContent, setCardInputContent] = useState('')
 
     useEffect(() => {
         fetchOrders()
@@ -1136,6 +1162,61 @@ function OrdersManage() {
         } finally {
             setLoading(false)
         }
+    }
+
+    // 执行发货请求
+    const doShip = async (orderId, cardContent = null) => {
+        setShipping(orderId)
+        try {
+            const body = cardContent ? { cardContent } : {}
+            const res = await fetch(`/api/admin/orders/${orderId}/ship`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(body)
+            })
+            const data = await res.json()
+
+            if (res.ok) {
+                showToast(data.emailSent ? '发货成功，邮件已发送' : '发货成功，邮件发送失败', data.emailSent ? 'success' : 'warning')
+                setShowCardInputModal(false)
+                setCardInputOrder(null)
+                setCardInputContent('')
+                fetchOrders()
+            } else if (data.needCardContent) {
+                // 需要输入卡密，显示弹窗
+                const order = orders.find(o => o.id === orderId)
+                setCardInputOrder(order)
+                setShowCardInputModal(true)
+            } else {
+                showToast(data.error || '发货失败', 'error')
+            }
+        } catch (error) {
+            showToast('发货失败', 'error')
+        } finally {
+            setShipping(null)
+        }
+    }
+
+    const handleShip = async (order) => {
+        showConfirm(
+            '确认发货',
+            `确定要为订单 ${order.orderNo} 发货吗？发货后将自动发送邮件通知客户。`,
+            async () => {
+                await doShip(order.id)
+            }
+        )
+    }
+
+    // 提交手动输入的卡密
+    const handleSubmitCardInput = async () => {
+        if (!cardInputContent.trim()) {
+            showToast('请输入卡密内容', 'error')
+            return
+        }
+        await doShip(cardInputOrder.id, cardInputContent)
     }
 
     const formatTime = (dateStr) => {
@@ -1169,6 +1250,7 @@ function OrdersManage() {
                     >
                         <option value="all">全部状态</option>
                         <option value="PENDING">待支付</option>
+                        <option value="PAID">待发货</option>
                         <option value="COMPLETED">已完成</option>
                         <option value="CANCELLED">已取消</option>
                     </select>
@@ -1200,6 +1282,15 @@ function OrdersManage() {
                             </td>
                             <td className="time">{formatTime(order.createdAt)}</td>
                             <td className="actions">
+                                {order.status === 'PAID' && (
+                                    <button
+                                        className="action-btn ship"
+                                        onClick={() => handleShip(order)}
+                                        disabled={shipping === order.id}
+                                    >
+                                        {shipping === order.id ? '发货中...' : '发货'}
+                                    </button>
+                                )}
                                 <button className="action-btn view">查看</button>
                             </td>
                         </tr>
@@ -1209,13 +1300,62 @@ function OrdersManage() {
                     )}
                 </tbody>
             </table>
+
+            {/* 卡密输入弹窗 */}
+            {showCardInputModal && cardInputOrder && (
+                <div className="modal-overlay" onClick={() => setShowCardInputModal(false)}>
+                    <div className="modal-content" onClick={e => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <h3>手动发货 - 输入卡密</h3>
+                            <button className="modal-close" onClick={() => setShowCardInputModal(false)}>×</button>
+                        </div>
+                        <div className="modal-body">
+                            <div className="form-group">
+                                <label>订单号</label>
+                                <input type="text" value={cardInputOrder.orderNo} disabled />
+                            </div>
+                            <div className="form-group">
+                                <label>商品</label>
+                                <input type="text" value={cardInputOrder.productName} disabled />
+                            </div>
+                            <div className="form-group">
+                                <label>数量</label>
+                                <input type="text" value={cardInputOrder.quantity} disabled />
+                            </div>
+                            <div className="form-group">
+                                <label>卡密内容 <span className="hint">(每行一个，最多 {cardInputOrder.quantity} 个)</span></label>
+                                <textarea
+                                    value={cardInputContent}
+                                    onChange={(e) => setCardInputContent(e.target.value)}
+                                    placeholder="请输入卡密内容，每行一个"
+                                    rows={5}
+                                    autoFocus
+                                />
+                            </div>
+                            <div className="setting-notice" style={{ marginTop: '10px' }}>
+                                💡 发货后将自动发送邮件通知客户，邮件中包含卡密信息
+                            </div>
+                        </div>
+                        <div className="modal-footer">
+                            <button className="btn btn-secondary" onClick={() => setShowCardInputModal(false)}>取消</button>
+                            <button
+                                className="btn btn-primary"
+                                onClick={handleSubmitCardInput}
+                                disabled={shipping === cardInputOrder.id}
+                            >
+                                {shipping === cardInputOrder.id ? '发货中...' : '确认发货'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }
 
 // 卡密管理
 function CardsManage() {
-    const { toast } = useToast()
+    const { showToast } = useToast()
     const { token } = useAuthStore()
     const location = useLocation()
 
@@ -1233,6 +1373,7 @@ function CardsManage() {
     const [total, setTotal] = useState(0)
     const [showImportModal, setShowImportModal] = useState(false)
     const [importText, setImportText] = useState('')
+    const [selectedVariantId, setSelectedVariantId] = useState('')
     const [selectedCards, setSelectedCards] = useState([])
     const [editingCard, setEditingCard] = useState(null)
     const [editContent, setEditContent] = useState('')
@@ -1275,7 +1416,7 @@ function CardsManage() {
                 setTotal(data.total)
             }
         } catch (error) {
-            toast({ type: 'error', message: '获取卡密列表失败' })
+            showToast('获取卡密列表失败', 'error')
         } finally {
             setLoading(false)
         }
@@ -1288,17 +1429,23 @@ function CardsManage() {
     // 批量导入卡密
     const handleImport = async () => {
         if (!selectedProductId) {
-            toast({ type: 'error', message: '请先选择商品' })
+            showToast('请先选择商品', 'error')
+            return
+        }
+        // 检查商品是否有规格，有则必须选择
+        const selectedProduct = products.find(p => p.id === selectedProductId)
+        if (selectedProduct?.variants?.length > 0 && !selectedVariantId) {
+            showToast('请选择规格', 'error')
             return
         }
         if (!importText.trim()) {
-            toast({ type: 'error', message: '请输入卡密内容' })
+            showToast('请输入卡密内容', 'error')
             return
         }
 
         const cardsArray = importText.split('\n').map(c => c.trim()).filter(c => c)
         if (cardsArray.length === 0) {
-            toast({ type: 'error', message: '没有有效的卡密' })
+            showToast('没有有效的卡密', 'error')
             return
         }
 
@@ -1310,19 +1457,23 @@ function CardsManage() {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
-                body: JSON.stringify({ productId: selectedProductId, cards: cardsArray })
+                body: JSON.stringify({
+                    productId: selectedProductId,
+                    variantId: selectedVariantId === 'default' ? null : selectedVariantId,
+                    cards: cardsArray
+                })
             })
             const data = await response.json()
             if (response.ok) {
-                toast({ type: 'success', message: data.message })
+                showToast(data.message, 'success')
                 setShowImportModal(false)
                 setImportText('')
                 fetchCards()
             } else {
-                toast({ type: 'error', message: data.error })
+                showToast(data.error, 'error')
             }
         } catch (error) {
-            toast({ type: 'error', message: '导入失败' })
+            showToast('导入失败', 'error')
         }
     }
 
@@ -1338,13 +1489,13 @@ function CardsManage() {
             })
             const data = await response.json()
             if (response.ok) {
-                toast({ type: 'success', message: data.message })
+                showToast(data.message, 'success')
                 fetchCards()
             } else {
-                toast({ type: 'error', message: data.error })
+                showToast(data.error, 'error')
             }
         } catch (error) {
-            toast({ type: 'error', message: '删除失败' })
+            showToast('删除失败', 'error')
         }
     }
 
@@ -1357,7 +1508,7 @@ function CardsManage() {
     // 保存编辑
     const handleSaveEdit = async () => {
         if (!editContent.trim()) {
-            toast({ type: 'error', message: '卡密内容不能为空' })
+            showToast('卡密内容不能为空', 'error')
             return
         }
 
@@ -1372,22 +1523,22 @@ function CardsManage() {
             })
             const data = await response.json()
             if (response.ok) {
-                toast({ type: 'success', message: data.message })
+                showToast(data.message, 'success')
                 setEditingCard(null)
                 setEditContent('')
                 fetchCards()
             } else {
-                toast({ type: 'error', message: data.error })
+                showToast(data.error, 'error')
             }
         } catch (error) {
-            toast({ type: 'error', message: '保存失败' })
+            showToast('保存失败', 'error')
         }
     }
 
     // 批量删除
     const handleBatchDelete = async () => {
         if (selectedCards.length === 0) {
-            toast({ type: 'error', message: '请选择要删除的卡密' })
+            showToast('请选择要删除的卡密', 'error')
             return
         }
         if (!confirm(`确定删除选中的 ${selectedCards.length} 个卡密？`)) return
@@ -1404,14 +1555,14 @@ function CardsManage() {
             })
             const data = await response.json()
             if (response.ok) {
-                toast({ type: 'success', message: data.message })
+                showToast(data.message, 'success')
                 setSelectedCards([])
                 fetchCards()
             } else {
-                toast({ type: 'error', message: data.error })
+                showToast(data.error, 'error')
             }
         } catch (error) {
-            toast({ type: 'error', message: '删除失败' })
+            showToast('删除失败', 'error')
         }
     }
 
@@ -1514,6 +1665,7 @@ function CardsManage() {
                                     </th>
                                     <th>卡密内容</th>
                                     <th>商品</th>
+                                    <th>规格</th>
                                     <th>状态</th>
                                     <th>订单号</th>
                                     <th>创建时间</th>
@@ -1536,6 +1688,7 @@ function CardsManage() {
                                             <code className="card-content">{card.content.length > 50 ? card.content.substring(0, 50) + '...' : card.content}</code>
                                         </td>
                                         <td>{card.product?.name || '-'}</td>
+                                        <td>{card.variant?.name || '-'}</td>
                                         <td>{getStatusBadge(card.status)}</td>
                                         <td>{card.order?.orderNo || '-'}</td>
                                         <td>{new Date(card.createdAt).toLocaleString('zh-CN')}</td>
@@ -1597,7 +1750,10 @@ function CardsManage() {
                                 <label>目标商品</label>
                                 <select
                                     value={selectedProductId}
-                                    onChange={(e) => setSelectedProductId(e.target.value)}
+                                    onChange={(e) => {
+                                        setSelectedProductId(e.target.value)
+                                        setSelectedVariantId('')
+                                    }}
                                 >
                                     <option value="">请选择商品</option>
                                     {products.map(p => (
@@ -1605,6 +1761,22 @@ function CardsManage() {
                                     ))}
                                 </select>
                             </div>
+                            {/* 规格选择 - 当商品有规格时必须选择 */}
+                            {selectedProductId && products.find(p => p.id === selectedProductId)?.variants?.length > 0 && (
+                                <div className="form-group">
+                                    <label>目标规格 <span className="required">*</span></label>
+                                    <select
+                                        value={selectedVariantId}
+                                        onChange={(e) => setSelectedVariantId(e.target.value)}
+                                    >
+                                        <option value="">请选择规格</option>
+                                        <option value="default">默认 (¥{products.find(p => p.id === selectedProductId)?.price})</option>
+                                        {products.find(p => p.id === selectedProductId)?.variants?.map(v => (
+                                            <option key={v.id} value={v.id}>{v.name} (¥{v.price})</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
                             <div className="form-group">
                                 <label>卡密内容 <span className="hint">(每行一个卡密)</span></label>
                                 <textarea
@@ -1847,11 +2019,13 @@ function SettingsPage() {
         alipayEnabled: true,
         wechatEnabled: true,
         usdtEnabled: false,
+        // USDT配置
+        usdtWalletAddress: '',
+        usdtExchangeRate: 7,
         // 订单设置
         orderTimeout: 30,
         autoCancel: true,
-        delayedDelivery: false,
-        delayedDeliveryMinutes: 5,
+        stockMode: 'auto', // 'auto' = 库存=卡密数量, 'manual' = 手动设置库存
         // 邮件设置
         smtpHost: '',
         smtpPort: 465,
@@ -2034,8 +2208,8 @@ function SettingsPage() {
                         </div>
                         <div className="setting-item toggle-item">
                             <div className="toggle-info">
-                                <label>USDT</label>
-                                <span className="toggle-desc">启用USDT支付 (需配置)</span>
+                                <label>USDT-TRC20</label>
+                                <span className="toggle-desc">启用USDT支付</span>
                             </div>
                             <label className="toggle-switch">
                                 <input
@@ -2046,8 +2220,36 @@ function SettingsPage() {
                                 <span className="toggle-slider"></span>
                             </label>
                         </div>
+
+                        {settings.usdtEnabled && (
+                            <>
+                                <div className="setting-item">
+                                    <label>USDT 收款地址 (TRC20)</label>
+                                    <input
+                                        type="text"
+                                        value={settings.usdtWalletAddress}
+                                        onChange={(e) => handleChange('usdtWalletAddress', e.target.value)}
+                                        placeholder="T开头的TRC20地址"
+                                    />
+                                    <span className="setting-hint">请确保地址正确，否则无法收款</span>
+                                </div>
+                                <div className="setting-item">
+                                    <label>USDT 汇率 (1 USDT = ? CNY)</label>
+                                    <input
+                                        type="number"
+                                        value={settings.usdtExchangeRate}
+                                        onChange={(e) => handleChange('usdtExchangeRate', parseFloat(e.target.value))}
+                                        min={1}
+                                        max={20}
+                                        step={0.1}
+                                    />
+                                    <span className="setting-hint">当前汇率：1 USDT = ¥{settings.usdtExchangeRate}</span>
+                                </div>
+                            </>
+                        )}
+
                         <div className="setting-notice">
-                            💡 支付密钥配置请在服务器环境变量中设置，避免泄露
+                            💡 USDT支付每30秒自动检测钱包转入，到账后自动发货
                         </div>
                     </div>
                 )}
@@ -2055,17 +2257,74 @@ function SettingsPage() {
                 {/* 订单设置 */}
                 {activeTab === 'order' && (
                     <div className="settings-section">
+                        {/* 库存计算方式 - 现代卡片选择 */}
+                        <div className="setting-item stock-mode-section">
+                            <label className="stock-mode-label">库存计算方式</label>
+                            <div className="stock-mode-selector">
+                                <div
+                                    className={`stock-mode-option ${settings.stockMode === 'auto' ? 'selected' : ''}`}
+                                    onClick={() => handleChange('stockMode', 'auto')}
+                                    role="button"
+                                    tabIndex={0}
+                                >
+                                    <div className="stock-mode-radio">
+                                        <div className="radio-outer">
+                                            <div className="radio-inner"></div>
+                                        </div>
+                                    </div>
+                                    <div className="stock-mode-info">
+                                        <div className="stock-mode-header">
+                                            <span className="stock-mode-emoji">🤖</span>
+                                            <span className="stock-mode-name">自动计算库存</span>
+                                            <span className="stock-mode-tag recommended">推荐</span>
+                                        </div>
+                                        <div className="stock-mode-description">
+                                            系统自动统计可用卡密数量作为库存，确保库存实时准确
+                                        </div>
+                                    </div>
+                                </div>
+                                <div
+                                    className={`stock-mode-option ${settings.stockMode === 'manual' ? 'selected' : ''}`}
+                                    onClick={() => handleChange('stockMode', 'manual')}
+                                    role="button"
+                                    tabIndex={0}
+                                >
+                                    <div className="stock-mode-radio">
+                                        <div className="radio-outer">
+                                            <div className="radio-inner"></div>
+                                        </div>
+                                    </div>
+                                    <div className="stock-mode-info">
+                                        <div className="stock-mode-header">
+                                            <span className="stock-mode-emoji">✏️</span>
+                                            <span className="stock-mode-name">手动设置库存</span>
+                                        </div>
+                                        <div className="stock-mode-description">
+                                            可在商品管理中手动设置库存，适用于库存充足但卡密未导入的情况
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* 订单超时 */}
                         <div className="setting-item">
-                            <label>订单超时时间 (分钟)</label>
-                            <input
-                                type="number"
-                                value={settings.orderTimeout}
-                                onChange={(e) => handleChange('orderTimeout', parseInt(e.target.value))}
-                                min={5}
-                                max={120}
-                            />
+                            <label>订单超时时间</label>
+                            <div className="input-with-suffix">
+                                <input
+                                    type="number"
+                                    value={settings.orderTimeout}
+                                    onChange={(e) => handleChange('orderTimeout', parseInt(e.target.value))}
+                                    min={5}
+                                    max={120}
+                                    style={{ width: '120px' }}
+                                />
+                                <span className="input-suffix">分钟</span>
+                            </div>
                             <span className="setting-hint">未支付订单超时后自动取消</span>
                         </div>
+
+                        {/* 自动取消 */}
                         <div className="setting-item toggle-item">
                             <div className="toggle-info">
                                 <label>自动取消</label>
@@ -2080,33 +2339,6 @@ function SettingsPage() {
                                 <span className="toggle-slider"></span>
                             </label>
                         </div>
-                        <div className="setting-item toggle-item">
-                            <div className="toggle-info">
-                                <label>延时发货</label>
-                                <span className="toggle-desc">对无卡密商品延迟发送订单完成通知</span>
-                            </div>
-                            <label className="toggle-switch">
-                                <input
-                                    type="checkbox"
-                                    checked={settings.delayedDelivery}
-                                    onChange={(e) => handleChange('delayedDelivery', e.target.checked)}
-                                />
-                                <span className="toggle-slider"></span>
-                            </label>
-                        </div>
-                        {settings.delayedDelivery && (
-                            <div className="setting-item">
-                                <label>延迟时间 (分钟)</label>
-                                <input
-                                    type="number"
-                                    value={settings.delayedDeliveryMinutes}
-                                    onChange={(e) => handleChange('delayedDeliveryMinutes', parseInt(e.target.value) || 5)}
-                                    min={1}
-                                    max={1440}
-                                />
-                                <span className="setting-hint">无卡密商品订单完成后延迟发送通知的时间</span>
-                            </div>
-                        )}
                     </div>
                 )}
 

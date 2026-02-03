@@ -14,12 +14,12 @@ function Cart() {
     const handleQuantityChange = (item, delta) => {
         const newQty = item.quantity + delta
         if (newQty >= 1 && newQty <= item.stock) {
-            updateQuantity(item.id, newQty)
+            updateQuantity(item.cartItemId, newQty)
         }
     }
 
     const handleRemove = (item) => {
-        removeItem(item.id)
+        removeItem(item.cartItemId)
         toast.success('已从购物车移除')
     }
 
@@ -65,7 +65,7 @@ function Cart() {
                 {/* 购物车列表 */}
                 <div className="cart-items">
                     {items.map((item) => (
-                        <div key={item.id} className="cart-item">
+                        <div key={item.cartItemId} className="cart-item">
                             {/* 商品图片 */}
                             <Link to={`/products/${item.id}`} className="item-image">
                                 <img src={item.image} alt={item.name} />
@@ -76,6 +76,9 @@ function Cart() {
                                 <Link to={`/products/${item.id}`} className="item-name">
                                     {item.name}
                                 </Link>
+                                {item.variantName && (
+                                    <span className="item-variant">规格: {item.variantName}</span>
+                                )}
                                 <p className="item-desc">{item.description}</p>
                                 <div className="item-tags">
                                     {item.tags?.map((tag, index) => (

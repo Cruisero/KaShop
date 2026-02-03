@@ -5,6 +5,9 @@ const createOrderSchema = Joi.object({
     productId: Joi.string().uuid().required().messages({
         'any.required': '商品ID不能为空'
     }),
+    variantId: Joi.string().uuid().optional().allow(null).messages({
+        'string.guid': '无效的规格ID'
+    }),
     quantity: Joi.number().integer().min(1).max(100).default(1).messages({
         'number.min': '数量至少为1',
         'number.max': '单次最多购买100个'

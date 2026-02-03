@@ -67,6 +67,7 @@ deploy_all() {
         --exclude '.git' \
         --exclude 'dist' \
         --exclude 'uploads' \
+        --exclude '.env' \
         ./ ${SERVER}:${REMOTE_PATH}/
     
     info "重新构建所有 Docker 镜像..."

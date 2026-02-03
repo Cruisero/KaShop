@@ -130,7 +130,7 @@
 }
 
 .auth-footer a {
-    color: var(--primary-light);
+    /* color: var(--primary-light); */
     font-weight: 500;
 }
 
@@ -165,15 +165,64 @@
 }
 
 /* 演示账号 */
-.demo-account {
+/* .demo-account {
     margin-top: 20px;
     text-align: center;
     padding: 12px;
     background: rgba(239, 68, 68, 0.1);
     border-radius: var(--radius-sm);
-}
+} */
 
 .demo-account p {
     font-size: 0.85rem;
     color: var(--text-secondary);
+}
+
+/* 成功图标 */
+.success-icon {
+    width: 64px;
+    height: 64px;
+    background: var(--gradient-primary);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+    color: white;
+    font-size: 2rem;
+}
+
+.error-icon {
+    font-size: 3rem;
+    margin-bottom: 16px;
+}
+
+/* 返回链接 */
+.back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: 0.95rem;
+    transition: color var(--transition-fast);
+}
+
+.back-link:hover {
+    color: var(--primary-light);
+}
+
+/* 提示信息 */
+.auth-tips {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 16px 20px;
+    margin-top: 20px;
+}
+
+.auth-tips p {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin: 6px 0;
 }

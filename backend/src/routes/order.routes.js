@@ -3,10 +3,10 @@ const router = express.Router()
 const orderController = require('../controllers/orderController')
 const { validateBody } = require('../middleware/validation')
 const { createOrderSchema, queryOrderSchema } = require('../validators/order')
-const { authenticate } = require('../middleware/auth')
+const { authenticate, optionalAuth } = require('../middleware/auth')
 
-// 创建订单
-router.post('/', validateBody(createOrderSchema), orderController.createOrder)
+// 创建订单 (可选认证 - 登录用户会关联userId)
+router.post('/', optionalAuth, validateBody(createOrderSchema), orderController.createOrder)
 
 // 获取当前用户的订单列表 (需要登录)
 router.get('/my-orders', authenticate, orderController.getUserOrders)
@@ -19,5 +19,8 @@ router.get('/:orderNo', orderController.getOrderByNo)
 
 // 获取订单卡密 (支付成功后)
 router.get('/:orderNo/cards', orderController.getOrderCards)
+
+// 取消订单
+router.post('/:orderNo/cancel', orderController.cancelOrder)
 
 module.exports = router

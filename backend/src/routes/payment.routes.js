@@ -10,6 +10,7 @@ router.post('/create', paymentController.createPayment)
 
 // 支付回调 - 支付宝
 router.post('/callback/alipay', paymentController.alipayCallback)
+router.post('/alipay/notify', paymentController.alipayCallback) // 别名路由
 
 // 支付回调 - 微信
 router.post('/callback/wechat', paymentController.wechatCallback)

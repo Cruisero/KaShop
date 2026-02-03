@@ -109,13 +109,21 @@ exports.deleteCard = async (req, res, next) => {
 }
 
 // 发放卡密 (内部使用)
-exports.dispenseCards = async (orderId, productId, quantity) => {
+exports.dispenseCards = async (orderId, productId, quantity, variantId = null) => {
+    // 构建查询条件
+    const whereCondition = {
+        productId,
+        status: 'AVAILABLE'
+    }
+
+    // 如果有规格ID，优先按规格发放
+    if (variantId) {
+        whereCondition.variantId = variantId
+    }
+
     // 获取可用卡密
     const availableCards = await prisma.card.findMany({
-        where: {
-            productId,
-            status: 'AVAILABLE'
-        },
+        where: whereCondition,
         take: quantity
     })
 
@@ -133,6 +141,16 @@ exports.dispenseCards = async (orderId, productId, quantity) => {
             soldAt: new Date()
         }
     })
+
+    // 更新库存（规格或商品）
+    if (variantId) {
+        await prisma.productVariant.update({
+            where: { id: variantId },
+            data: {
+                stock: { decrement: quantity }
+            }
+        })
+    }
 
     // 更新商品销量和库存
     await prisma.product.update({

@@ -375,6 +375,106 @@ exports.updateOrderStatus = async (req, res, next) => {
     }
 }
 
+// 订单管理 - 手动发货（完成订单并发送邮件）
+exports.shipOrder = async (req, res, next) => {
+    try {
+        const { id } = req.params
+        const { cardContent } = req.body  // 支持手动输入卡密内容
+        const emailService = require('../services/emailService')
+
+        // 获取订单和卡密信息
+        const order = await prisma.order.findUnique({
+            where: { id },
+            include: {
+                product: true,
+                cards: true
+            }
+        })
+
+        if (!order) {
+            return res.status(404).json({ error: '订单不存在' })
+        }
+
+        if (order.status !== 'PAID') {
+            return res.status(400).json({ error: '只有已支付订单才能发货' })
+        }
+
+        // 检查是否需要手动输入卡密
+        const hasExistingCards = order.cards && order.cards.length > 0
+        const hasManualInput = cardContent && cardContent.trim()
+
+        if (!hasExistingCards && !hasManualInput) {
+            return res.status(400).json({
+                error: '该订单没有卡密，请输入卡密内容后再发货',
+                needCardContent: true,
+                orderNo: order.orderNo
+            })
+        }
+
+        // 如果手动输入了卡密，创建卡密记录并关联到订单
+        let newCards = []
+        if (hasManualInput) {
+            // 按行分割卡密（支持多个卡密）
+            const cardLines = cardContent.split('\n')
+                .map(line => line.trim())
+                .filter(line => line.length > 0)
+                .slice(0, order.quantity)  // 最多创建订单数量的卡密
+
+            if (cardLines.length > 0) {
+                // 创建卡密记录
+                for (const content of cardLines) {
+                    const card = await prisma.card.create({
+                        data: {
+                            productId: order.productId,
+                            variantId: order.variantId || null,
+                            content: content,
+                            status: 'SOLD',
+                            orderId: order.id,
+                            soldAt: new Date()
+                        }
+                    })
+                    newCards.push(card)
+                }
+            }
+        }
+
+        // 更新订单状态为已完成
+        const updatedOrder = await prisma.order.update({
+            where: { id },
+            data: {
+                status: 'COMPLETED',
+                completedAt: new Date()
+            },
+            include: {
+                product: true,
+                cards: true  // 包含刚创建的卡密
+            }
+        })
+
+        // 发送邮件通知
+        let emailSent = false
+        try {
+            await emailService.sendOrderCompletedEmail(updatedOrder, updatedOrder.cards)
+            emailSent = true
+        } catch (emailError) {
+            console.error('发货邮件发送失败:', emailError)
+        }
+
+        res.json({
+            message: emailSent ? '发货成功，邮件已发送' : '发货成功，但邮件发送失败',
+            order: {
+                orderNo: updatedOrder.orderNo,
+                status: updatedOrder.status,
+                completedAt: updatedOrder.completedAt
+            },
+            cardsAdded: newCards.length,
+            emailSent
+        })
+    } catch (error) {
+        next(error)
+    }
+}
+
 // 用户管理
 exports.getUsers = async (req, res, next) => {
     try {
@@ -458,10 +558,11 @@ exports.testEmail = async (req, res, next) => {
 // 获取卡密列表
 exports.getCards = async (req, res, next) => {
     try {
-        const { productId, status, page = 1, pageSize = 20 } = req.query
+        const { productId, variantId, status, page = 1, pageSize = 20 } = req.query
 
         const where = {}
         if (productId) where.productId = productId
+        if (variantId) where.variantId = variantId
         if (status) where.status = status.toUpperCase()
 
         const [cards, total] = await Promise.all([
@@ -469,6 +570,7 @@ exports.getCards = async (req, res, next) => {
                 where,
                 include: {
                     product: { select: { id: true, name: true } },
+                    variant: { select: { id: true, name: true } },
                     order: { select: { orderNo: true } }
                 },
                 orderBy: { createdAt: 'desc' },
@@ -493,7 +595,7 @@ exports.getCards = async (req, res, next) => {
 // 批量导入卡密
 exports.importCards = async (req, res, next) => {
     try {
-        const { productId, cards } = req.body
+        const { productId, variantId, cards } = req.body
 
         if (!productId) {
             return res.status(400).json({ error: '请选择商品' })
@@ -514,17 +616,25 @@ exports.importCards = async (req, res, next) => {
         const result = await prisma.card.createMany({
             data: uniqueCards.map(content => ({
                 productId,
+                variantId: variantId || null,
                 content: content.trim(),
                 status: 'AVAILABLE'
             })),
             skipDuplicates: false
         })
 
-        // 更新商品库存
-        await prisma.product.update({
-            where: { id: productId },
-            data: { stock: { increment: result.count } }
-        })
+        // 更新库存（商品或规格）
+        if (variantId) {
+            await prisma.productVariant.update({
+                where: { id: variantId },
+                data: { stock: { increment: result.count } }
+            })
+        } else {
+            await prisma.product.update({
+                where: { id: productId },
+                data: { stock: { increment: result.count } }
+            })
+        }
 
         res.json({
             message: `成功导入 ${result.count} 个卡密`,

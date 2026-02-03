@@ -16,6 +16,7 @@ function OrderResult() {
     const [order, setOrder] = useState(null)
     const [loading, setLoading] = useState(true)
     const [showCards, setShowCards] = useState(false)
+    const [paying, setPaying] = useState(false)
 
     useEffect(() => {
         const fetchOrder = async () => {
@@ -24,25 +25,26 @@ function OrderResult() {
                 const res = await fetch(`/api/orders/${orderNo}`)
                 const data = await res.json()
 
-                if (data.error) {
+                if (data.error || !data.order) {
                     setOrder(null)
                 } else {
+                    const orderData = data.order
                     // 格式化订单数据以匹配现有结构
                     setOrder({
-                        orderNo: data.orderNo,
-                        status: data.status?.toLowerCase() || 'pending',
-                        email: data.email,
+                        orderNo: orderData.orderNo,
+                        status: orderData.status?.toLowerCase() || 'pending',
+                        email: orderData.email,
                         product: {
-                            name: data.productName || data.product?.name,
-                            image: data.product?.image || 'https://via.placeholder.com/200x150',
+                            name: orderData.productName || orderData.product?.name,
+                            image: orderData.product?.image || 'https://via.placeholder.com/200x150',
                         },
-                        quantity: data.quantity,
-                        totalAmount: parseFloat(data.totalAmount),
-                        paymentMethod: data.paymentMethod === 'alipay' ? '支付宝' :
-                            data.paymentMethod === 'wechat' ? '微信支付' : data.paymentMethod,
-                        createdAt: new Date(data.createdAt).toLocaleString(),
-                        paidAt: data.paidAt ? new Date(data.paidAt).toLocaleString() : null,
-                        cards: (data.cards || []).map((c, idx) => ({
+                        quantity: orderData.quantity,
+                        totalAmount: parseFloat(orderData.totalAmount) || 0,
+                        paymentMethod: orderData.paymentMethod === 'alipay' ? '支付宝' :
+                            orderData.paymentMethod === 'wechat' ? '微信支付' : orderData.paymentMethod,
+                        createdAt: orderData.createdAt ? new Date(orderData.createdAt).toLocaleString() : '',
+                        paidAt: orderData.paidAt ? new Date(orderData.paidAt).toLocaleString() : null,
+                        cards: (orderData.cards || []).map((c, idx) => ({
                             id: idx + 1,
                             content: c.content || c
                         }))
@@ -65,6 +67,155 @@ function OrderResult() {
         }).catch(() => {
             toast.error('复制失败')
         })
+    }
+
+    const [qrCodeUrl, setQrCodeUrl] = useState(null)
+    const [usdtPayment, setUsdtPayment] = useState(null)
+    const [countdown, setCountdown] = useState(null) // 倒计时秒数
+    const ORDER_TIMEOUT_MINUTES = 15 // 订单超时时间（分钟）
+
+    // 订单倒计时
+    useEffect(() => {
+        if (!order || order.status !== 'pending') {
+            setCountdown(null)
+            return
+        }
+
+        const calculateRemaining = () => {
+            const createdAt = new Date(order.createdAt).getTime()
+            const expireAt = createdAt + ORDER_TIMEOUT_MINUTES * 60 * 1000
+            const remaining = Math.max(0, Math.floor((expireAt - Date.now()) / 1000))
+            return remaining
+        }
+
+        setCountdown(calculateRemaining())
+
+        const timer = setInterval(() => {
+            const remaining = calculateRemaining()
+            setCountdown(remaining)
+
+            if (remaining <= 0) {
+                clearInterval(timer)
+                // 订单已过期，刷新页面获取最新状态
+                fetchOrder()
+            }
+        }, 1000)
+
+        return () => clearInterval(timer)
+    }, [order])
+
+    // 格式化倒计时显示
+    const formatCountdown = (seconds) => {
+        if (seconds === null || seconds <= 0) return '已过期'
+        const mins = Math.floor(seconds / 60)
+        const secs = seconds % 60
+        return `${mins}:${secs.toString().padStart(2, '0')}`
+    }
+
+    // 轮询支付状态 - 当显示二维码或USDT支付时启动
+    useEffect(() => {
+        // 只有显示支付信息并且订单状态为待支付时才轮询
+        if ((!qrCodeUrl && !usdtPayment) || order?.status !== 'pending') {
+            return
+        }
+
+        const interval = setInterval(async () => {
+            try {
+                const res = await fetch(`/api/payment/status/${order.orderNo}`)
+                const data = await res.json()
+                if (data.orderStatus === 'paid' || data.orderStatus === 'completed') {
+                    setQrCodeUrl(null)
+                    toast.success('支付成功！')
+                    // 刷新订单信息
+                    window.location.reload()
+                }
+            } catch (error) {
+                console.error('轮询支付状态失败:', error)
+            }
+        }, 3000) // 每3秒检查一次
+
+        return () => clearInterval(interval)
+    }, [qrCodeUrl, order?.orderNo, order?.status])
+
+    // 订单待支付时自动生成二维码
+    useEffect(() => {
+        if (order?.status === 'pending' && !qrCodeUrl && !paying) {
+            handlePayment()
+        }
+    }, [order?.status])
+
+    const handlePayment = async () => {
+        if (!order || paying) return
+        setPaying(true)
+        try {
+            // 确定支付方式
+            let paymentMethod = 'alipay'
+            if (order.paymentMethod === '微信支付') {
+                paymentMethod = 'wechat'
+            } else if (order.paymentMethod === 'USDT-TRC20' || order.paymentMethod === 'usdt') {
+                paymentMethod = 'usdt'
+            }
+
+            const res = await fetch('/api/payment/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    orderNo: order.orderNo,
+                    paymentMethod: paymentMethod
+                })
+            })
+            const data = await res.json()
+
+            if (data.paymentType === 'usdt') {
+                // USDT支付
+                setUsdtPayment({
+                    walletAddress: data.walletAddress,
+                    usdtAmount: data.usdtAmount,
+                    qrContent: data.qrContent,
+                    exchangeRate: data.exchangeRate
+                })
+                toast.success('请向指定地址转账 USDT')
+            } else if (data.paymentType === 'qrcode' && data.qrCode) {
+                // 支付宝二维码
+                setQrCodeUrl(data.qrCode)
+                toast.success('请使用支付宝扫描二维码支付')
+            } else if (data.payUrl) {
+                window.location.href = data.payUrl
+            } else {
+                toast.error(data.error || '获取支付信息失败')
+            }
+        } catch (error) {
+            console.error('支付请求失败:', error)
+            toast.error('支付请求失败')
+        } finally {
+            setPaying(false)
+        }
+    }
+
+    // 取消支付并更新订单状态
+    const cancelPayment = async () => {
+        try {
+            const res = await fetch(`/api/orders/${order.orderNo}/cancel`, {
+                method: 'POST'
+            })
+            const data = await res.json()
+            if (res.ok) {
+                toast.success('订单已取消')
+                setQrCodeUrl(null)
+                setUsdtPayment(null)
+                // 刷新订单状态
+                fetchOrder()
+            } else {
+                toast.error(data.error || '取消失败')
+            }
+        } catch (error) {
+            console.error('取消订单失败:', error)
+            toast.error('取消订单失败')
+        }
+    }
+
+    const cancelQrPayment = () => {
+        cancelPayment()
     }
 
     if (loading) {
@@ -121,40 +272,59 @@ function OrderResult() {
                 </div>
 
                 {/* 卡密信息 */}
-                {order.status === 'completed' && order.cards.length > 0 && (
+                {(order.status === 'completed' || order.status === 'paid') && order.cards.length > 0 && (
                     <div className="order-section cards-section">
                         <div className="section-header">
-                            <h3 className="section-subtitle">卡密信息</h3>
+                            <h3 className="section-subtitle">🎁 卡密信息</h3>
                             <button
-                                className="toggle-cards-btn"
-                                onClick={() => setShowCards(!showCards)}
+                                className="copy-all-btn"
+                                onClick={() => {
+                                    const allCards = order.cards.map(c => c.content).join('\n')
+                                    copyToClipboard(allCards)
+                                }}
                             >
-                                {showCards ? '隐藏卡密' : '显示卡密'}
+                                <FiCopy /> 复制全部
                             </button>
                         </div>
 
-                        {showCards && (
-                            <div className="cards-list">
-                                {order.cards.map((card, index) => (
-                                    <div key={card.id} className="card-item">
-                                        <div className="card-header">
-                                            <span>卡密 #{index + 1}</span>
-                                            <button
-                                                className="copy-btn"
-                                                onClick={() => copyToClipboard(card.content)}
-                                            >
-                                                <FiCopy />
-                                                复制
-                                            </button>
-                                        </div>
-                                        <pre className="card-content">{card.content}</pre>
+                        <div className="cards-container">
+                            {order.cards.map((card, index) => (
+                                <div key={card.id} className="card-item">
+                                    <div className="card-index">#{index + 1}</div>
+                                    <div className="card-content-wrapper">
+                                        <code className="card-content">{card.content}</code>
                                     </div>
-                                ))}
-                            </div>
-                        )}
+                                    <button
+                                        className="card-copy-btn"
+                                        onClick={() => copyToClipboard(card.content)}
+                                        title="复制"
+                                    >
+                                        <FiCopy />
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
 
-                        <div className="cards-warning">
-                            ⚠️ 请妥善保管您的卡密信息，避免泄露
+                        <div className="cards-footer">
+                            <div className="cards-count">
+                                共 <strong>{order.cards.length}</strong> 个卡密
+                            </div>
+                            <div className="cards-warning">
+                                ⚠️ 请妥善保管，避免泄露
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* 已完成但没有卡密（卡密发放中） */}
+                {(order.status === 'completed' || order.status === 'paid') && order.cards.length === 0 && (
+                    <div className="order-section cards-pending-section">
+                        <div className="cards-pending-notice">
+                            <FiClock />
+                            <div>
+                                <h4>卡密发放中</h4>
+                                <p>请在订单详情或邮箱中查看卡密信息</p>
+                            </div>
                         </div>
                     </div>
                 )}
@@ -162,16 +332,122 @@ function OrderResult() {
                 {/* 待支付提示 */}
                 {order.status === 'pending' && (
                     <div className="order-section pending-section">
-                        <div className="pending-notice">
-                            <FiClock />
+                        {usdtPayment ? (
+                            /* USDT支付区域 */
+                            <div className="usdt-payment-section">
+                                <h4>💎 USDT-TRC20 支付</h4>
+
+                                <div className="usdt-amount-display">
+                                    <span className="amount-label">请转账</span>
+                                    <span className="usdt-amount">{usdtPayment.usdtAmount} USDT</span>
+                                    <button
+                                        className="copy-amount-btn"
+                                        onClick={() => copyToClipboard(usdtPayment.usdtAmount.toString())}
+                                    >
+                                        <FiCopy /> 复制
+                                    </button>
+                                </div>
+
+                                <div className="usdt-address-section">
+                                    <label>收款地址 (TRC20)</label>
+                                    <div className="address-box">
+                                        <code>{usdtPayment.walletAddress}</code>
+                                        <button
+                                            className="copy-btn"
+                                            onClick={() => copyToClipboard(usdtPayment.walletAddress)}
+                                        >
+                                            <FiCopy />
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="usdt-qr-container">
+                                    <img
+                                        src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(usdtPayment.walletAddress)}`}
+                                        alt="USDT收款地址"
+                                        className="usdt-qr-image"
+                                    />
+                                </div>
+
+                                <div className="usdt-info">
+                                    <p>汇率：1 USDT = ¥{usdtPayment.exchangeRate}</p>
+                                    <p>原价：¥{order.totalAmount.toFixed(2)}</p>
+                                </div>
+
+                                <div className="usdt-warning">
+                                    ⚠️ 请务必转账 <strong>{usdtPayment.usdtAmount} USDT</strong>，金额不符将无法自动确认
+                                </div>
+
+                                <div className={`payment-countdown ${countdown !== null && countdown <= 60 ? 'urgent' : ''}`}>
+                                    <span className="countdown-icon">⏱️</span>
+                                    <span>支付剩余时间：</span>
+                                    <span className="countdown-time">{formatCountdown(countdown)}</span>
+                                </div>
+
+                                <button
+                                    className="btn btn-secondary"
+                                    onClick={cancelPayment}
+                                >
+                                    取消支付
+                                </button>
+                            </div>
+                        ) : qrCodeUrl ? (
+                            /* 二维码支付区域 */
+                            <div className="qr-payment-section">
+                                <h4>请使用支付宝扫码支付</h4>
+                                <div className="qr-code-container">
+                                    <img
+                                        src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrCodeUrl)}`}
+                                        alt="支付二维码"
+                                        className="qr-code-image"
+                                    />
+                                </div>
+                                <p className="qr-amount">支付金额：<strong>¥{order.totalAmount.toFixed(2)}</strong></p>
+                                <p className="qr-hint">扫码后支付状态将自动更新</p>
+                                <div className={`payment-countdown ${countdown !== null && countdown <= 60 ? 'urgent' : ''}`}>
+                                    <span className="countdown-icon">⏱️</span>
+                                    <span>支付剩余时间：</span>
+                                    <span className="countdown-time">{formatCountdown(countdown)}</span>
+                                </div>
+                                <button
+                                    className="btn btn-secondary"
+                                    onClick={cancelQrPayment}
+                                >
+                                    取消支付
+                                </button>
+                            </div>
+                        ) : (
+                            /* 默认待支付区域 */
+                            <>
+                                <div className="pending-notice">
+                                    <FiClock />
+                                    <div>
+                                        <h4>订单待支付</h4>
+                                        <p>请尽快完成支付，超时订单将自动取消</p>
+                                    </div>
+                                </div>
+                                <button
+                                    className="btn btn-primary btn-lg pay-now-btn"
+                                    onClick={handlePayment}
+                                    disabled={paying}
+                                >
+                                    {paying ? '生成中...' : `立即支付 ¥${order.totalAmount.toFixed(2)}`}
+                                </button>
+                            </>
+                        )}
+                    </div>
+                )}
+
+                {/* 已取消提示 */}
+                {order.status === 'cancelled' && (
+                    <div className="order-section cancelled-section">
+                        <div className="cancelled-notice">
+                            <FiAlertCircle />
                             <div>
-                                <h4>订单待支付</h4>
-                                <p>请尽快完成支付，超时订单将自动取消</p>
+                                <h4>订单已取消</h4>
+                                <p>该订单已被取消，如需购买请重新下单</p>
                             </div>
                         </div>
-                        <button className="btn btn-primary btn-lg pay-now-btn">
-                            立即支付 ¥{order.totalAmount.toFixed(2)}
-                        </button>
                     </div>
                 )}
 
@@ -211,7 +487,7 @@ function OrderResult() {
 
             {/* 底部操作 */}
             <div className="order-actions">
-                <Link to="/order/query" className="btn btn-secondary">
+                <Link to="/user/orders" className="btn btn-secondary">
                     查询其他订单
                 </Link>
                 <Link to="/products" className="btn btn-primary">

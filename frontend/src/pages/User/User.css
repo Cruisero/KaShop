@@ -398,7 +398,8 @@
     color: var(--primary-light);
 }
 
-.view-cards-btn {
+.view-cards-btn,
+.pay-btn {
     padding: 6px 12px;
     background: rgba(239, 68, 68, 0.15);
     border: none;
@@ -406,6 +407,26 @@
     color: var(--primary-light);
     font-size: 0.85rem;
     cursor: pointer;
+    text-decoration: none;
+    transition: all 0.2s;
+}
+
+.pay-btn {
+    background: var(--gradient-primary);
+    color: white;
+}
+
+.pay-btn:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+}
+
+.expired-badge {
+    padding: 6px 12px;
+    background: rgba(107, 114, 128, 0.15);
+    border-radius: var(--radius-sm);
+    color: var(--text-muted);
+    font-size: 0.85rem;
 }
 
 .order-cards {

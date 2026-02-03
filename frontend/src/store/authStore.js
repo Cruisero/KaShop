@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { persist, createJSONStorage } from 'zustand/middleware'
 
 export const useAuthStore = create(
     persist(
@@ -10,6 +10,7 @@ export const useAuthStore = create(
 
             // 登录
             login: (user, token) => {
+                console.log('[AuthStore] 登录成功，保存用户信息:', { user, token: token ? '***' : null })
                 set({
                     user,
                     token,
@@ -19,6 +20,7 @@ export const useAuthStore = create(
 
             // 登出
             logout: () => {
+                console.log('[AuthStore] 执行登出')
                 set({
                     user: null,
                     token: null,
@@ -39,7 +41,13 @@ export const useAuthStore = create(
             }
         }),
         {
-            name: 'kashop-auth'
+            name: 'kashop-auth',
+            storage: createJSONStorage(() => localStorage),
+            partialize: (state) => ({
+                user: state.user,
+                token: state.token,
+                isAuthenticated: state.isAuthenticated
+            })
         }
     )
 )

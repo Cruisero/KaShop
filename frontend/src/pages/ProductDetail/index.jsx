@@ -63,26 +63,33 @@ function ProductDetail() {
             })
     }, [id])
 
+    // 获取当前选中规格的库存
+    const currentStock = selectedVariant?.stock ?? product?.stock ?? 0
+
     const handleQuantityChange = (delta) => {
         const newQty = quantity + delta
-        if (newQty >= 1 && newQty <= (product?.stock || 99)) {
+        if (newQty >= 1 && newQty <= currentStock) {
             setQuantity(newQty)
         }
     }
 
     const handleAddToCart = () => {
         if (product) {
-            addItem(product, quantity)
-            toast.success(`已添加 ${quantity} 件商品到购物车`)
+            addItem(product, quantity, selectedVariant)
+            const variantInfo = selectedVariant ? ` (${selectedVariant.name})` : ''
+            toast.success(`已添加 ${quantity} 件商品${variantInfo}到购物车`)
         }
     }
 
     const handleBuyNow = () => {
-        if (product) {
-            addItem(product, quantity)
+        if (product && currentStock > 0) {
+            addItem(product, quantity, selectedVariant)
             navigate('/cart')
         }
     }
+
+    // 库存不足检查
+    const isOutOfStock = currentStock === 0
 
     if (loading) {
         return (
@@ -222,7 +229,9 @@ function ProductDetail() {
                         </div>
                         <div className="sales-row">
                             <span>已售 {product.sold}</span>
-                            <span>库存 {selectedVariant?.stock ?? product.stock}</span>
+                            <span className={currentStock === 0 ? 'out-of-stock' : ''}>
+                                {currentStock > 0 ? `库存 ${currentStock}` : '暂无库存'}
+                            </span>
                         </div>
                     </div>
 
@@ -241,24 +250,32 @@ function ProductDetail() {
                             <button
                                 className="qty-btn"
                                 onClick={() => handleQuantityChange(1)}
-                                disabled={quantity >= product.stock}
+                                disabled={quantity >= currentStock || isOutOfStock}
                             >
                                 <FiPlus />
                             </button>
                         </div>
                         <span className="qty-total">
-                            小计: <strong>¥{(product.price * quantity).toFixed(2)}</strong>
+                            小计: <strong>¥{((selectedVariant?.price || product.price) * quantity).toFixed(2)}</strong>
                         </span>
                     </div>
 
                     {/* 购买按钮 */}
                     <div className="action-buttons">
-                        <button className="btn btn-secondary btn-lg" onClick={handleAddToCart}>
+                        <button
+                            className="btn btn-secondary btn-lg"
+                            onClick={handleAddToCart}
+                            disabled={isOutOfStock}
+                        >
                             <FiShoppingCart />
-                            加入购物车
+                            {isOutOfStock ? '暂无库存' : '加入购物车'}
                         </button>
-                        <button className="btn btn-primary btn-lg" onClick={handleBuyNow}>
-                            立即购买
+                        <button
+                            className="btn btn-primary btn-lg"
+                            onClick={handleBuyNow}
+                            disabled={isOutOfStock}
+                        >
+                            {isOutOfStock ? '补货中' : '立即购买'}
                         </button>
                     </div>
 

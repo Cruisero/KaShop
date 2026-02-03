@@ -27,9 +27,15 @@ api.interceptors.request.use(
 api.interceptors.response.use(
     (response) => response.data,
     (error) => {
-        const { response } = error
+        const { response, config } = error
 
         if (response?.status === 401) {
+            // 打印详细信息帮助调试
+            console.warn('[API] 401 错误触发登出:', {
+                url: config?.url,
+                method: config?.method,
+                hasToken: !!config?.headers?.Authorization
+            })
             // Token 过期，清除登录状态
             useAuthStore.getState().logout()
             window.location.href = '/login'

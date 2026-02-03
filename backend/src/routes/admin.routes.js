@@ -24,6 +24,7 @@ router.delete('/categories/:id', adminController.deleteCategory)
 // 订单管理
 router.get('/orders', adminController.getOrders)
 router.put('/orders/:id/status', adminController.updateOrderStatus)
+router.post('/orders/:id/ship', adminController.shipOrder)
 
 // 用户管理
 router.get('/users', adminController.getUsers)

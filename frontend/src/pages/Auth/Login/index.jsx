@@ -118,7 +118,7 @@ function Login() {
                             <input type="checkbox" />
                             <span>记住我</span>
                         </label>
-                        <a href="#" className="forgot-password">忘记密码？</a>
+                        <Link to="/forgot-password" className="forgot-password">忘记密码？</Link>
                     </div>
 
                     <button
@@ -144,9 +144,7 @@ function Login() {
                     </Link>
                 </div>
 
-                <div className="demo-account">
-                    <p>演示账号：admin@kashop.com / admin123</p>
-                </div>
+
             </div>
         </div>
     )

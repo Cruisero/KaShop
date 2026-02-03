@@ -238,6 +238,11 @@
     color: var(--text-muted);
 }
 
+.sales-row .out-of-stock {
+    color: var(--error);
+    font-weight: 600;
+}
+
 /* 数量选择 */
 .quantity-section {
     display: flex;

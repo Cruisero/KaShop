@@ -360,6 +360,7 @@
 }
 
 .status-badge.completed,
+.status-badge.paid,
 .status-badge.active {
     background: rgba(16, 185, 129, 0.15);
     color: var(--success);
@@ -434,6 +435,16 @@
 .action-btn.delete {
     background: rgba(239, 68, 68, 0.15);
     color: var(--error);
+}
+
+.action-btn.ship {
+    background: rgba(59, 130, 246, 0.15);
+    color: var(--info);
+}
+
+.action-btn.ship:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
 }
 
 .action-btn:hover {
@@ -609,6 +620,209 @@
 
 .toggle-switch input:checked+.toggle-slider::before {
     transform: translateX(24px);
+}
+
+/* 库存计算方式选择器 - 现代设计 */
+.stock-mode-section {
+    padding: 0 !important;
+    gap: 0 !important;
+}
+
+.stock-mode-label {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 16px;
+    display: block;
+}
+
+.stock-mode-selector {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.stock-mode-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 20px;
+    background: var(--bg-secondary);
+    border: 2px solid var(--border-color);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.stock-mode-option::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.05) 0%, transparent 100%);
+    opacity: 0;
+    transition: opacity 0.25s ease;
+}
+
+.stock-mode-option:hover {
+    border-color: rgba(239, 68, 68, 0.4);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px -8px rgba(0, 0, 0, 0.2);
+}
+
+.stock-mode-option:hover::before {
+    opacity: 1;
+}
+
+.stock-mode-option.selected {
+    border-color: var(--primary);
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, rgba(239, 68, 68, 0.03) 100%);
+    box-shadow: 0 4px 20px -4px rgba(239, 68, 68, 0.25);
+}
+
+.stock-mode-option.selected::before {
+    opacity: 1;
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, transparent 100%);
+}
+
+/* 自定义 Radio 按钮 */
+.stock-mode-radio {
+    flex-shrink: 0;
+    padding-top: 2px;
+}
+
+.radio-outer {
+    width: 22px;
+    height: 22px;
+    border: 2px solid var(--border-color);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    background: var(--bg-primary);
+}
+
+.stock-mode-option:hover .radio-outer {
+    border-color: rgba(239, 68, 68, 0.5);
+}
+
+.stock-mode-option.selected .radio-outer {
+    border-color: var(--primary);
+    background: var(--primary);
+    box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.15);
+}
+
+.radio-inner {
+    width: 8px;
+    height: 8px;
+    background: white;
+    border-radius: 50%;
+    transform: scale(0);
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.stock-mode-option.selected .radio-inner {
+    transform: scale(1);
+}
+
+/* 选项信息 */
+.stock-mode-info {
+    flex: 1;
+    position: relative;
+    z-index: 1;
+}
+
+.stock-mode-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 6px;
+}
+
+.stock-mode-emoji {
+    font-size: 1.25rem;
+    filter: grayscale(0.2);
+    transition: filter 0.25s ease;
+}
+
+.stock-mode-option:hover .stock-mode-emoji,
+.stock-mode-option.selected .stock-mode-emoji {
+    filter: grayscale(0);
+}
+
+.stock-mode-name {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    transition: color 0.25s ease;
+}
+
+.stock-mode-option.selected .stock-mode-name {
+    color: var(--primary-light);
+}
+
+.stock-mode-tag {
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.stock-mode-tag.recommended {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(16, 185, 129, 0.1) 100%);
+    color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.stock-mode-description {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+    transition: color 0.25s ease;
+}
+
+.stock-mode-option:hover .stock-mode-description,
+.stock-mode-option.selected .stock-mode-description {
+    color: var(--text-secondary);
+}
+
+/* 响应式 */
+@media (max-width: 640px) {
+    .stock-mode-option {
+        padding: 16px;
+        gap: 12px;
+    }
+
+    .stock-mode-header {
+        flex-wrap: wrap;
+    }
+
+    .stock-mode-name {
+        font-size: 0.95rem;
+    }
+
+    .stock-mode-description {
+        font-size: 0.8rem;
+    }
+}
+
+/* 输入后缀 */
+.input-with-suffix {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.input-suffix {
+    color: var(--text-muted);
+    font-size: 0.9rem;
 }
 
 /* 设置提示 */

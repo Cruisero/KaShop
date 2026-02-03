@@ -134,16 +134,59 @@ exports.getProductById = async (req, res, next) => {
             return res.status(404).json({ error: '商品不存在' })
         }
 
+        // 查询库存计算模式设置
+        const stockModeSetting = await prisma.setting.findUnique({
+            where: { key: 'stockMode' }
+        })
+        const stockMode = stockModeSetting?.value || 'auto'
+
+        let baseStock, variantsWithStock
+
+        if (stockMode === 'manual') {
+            // 手动模式：使用商品表的 stock 字段
+            baseStock = product.stock || 0
+            variantsWithStock = (product.variants || []).map(v => ({
+                ...v,
+                price: parseFloat(v.price),
+                originalPrice: v.originalPrice ? parseFloat(v.originalPrice) : null,
+                stock: v.stock || 0
+            }))
+        } else {
+            // 自动模式：使用可用卡密数量
+            baseStock = await prisma.card.count({
+                where: {
+                    productId: id,
+                    variantId: null,
+                    status: 'AVAILABLE'
+                }
+            })
+
+            variantsWithStock = await Promise.all(
+                (product.variants || []).map(async (v) => {
+                    const variantStock = await prisma.card.count({
+                        where: {
+                            productId: id,
+                            variantId: v.id,
+                            status: 'AVAILABLE'
+                        }
+                    })
+                    return {
+                        ...v,
+                        price: parseFloat(v.price),
+                        originalPrice: v.originalPrice ? parseFloat(v.originalPrice) : null,
+                        stock: variantStock
+                    }
+                })
+            )
+        }
+
         res.json({
             ...product,
             price: parseFloat(product.price),
             originalPrice: product.originalPrice ? parseFloat(product.originalPrice) : null,
             tags: product.tags || [],
-            variants: (product.variants || []).map(v => ({
-                ...v,
-                price: parseFloat(v.price),
-                originalPrice: v.originalPrice ? parseFloat(v.originalPrice) : null
-            }))
+            stock: baseStock,
+            variants: variantsWithStock
         })
     } catch (error) {
         next(error)

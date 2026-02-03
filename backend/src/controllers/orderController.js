@@ -12,12 +12,13 @@ const generateOrderNo = () => {
 // 创建订单
 exports.createOrder = async (req, res, next) => {
     try {
-        const { productId, quantity = 1, email, paymentMethod } = req.body
+        const { productId, variantId, quantity = 1, email, paymentMethod } = req.body
         const userId = req.user?.id || null
 
         // 查询商品
         const product = await prisma.product.findUnique({
-            where: { id: productId }
+            where: { id: productId },
+            include: { variants: true }
         })
 
         if (!product) {
@@ -28,13 +29,49 @@ exports.createOrder = async (req, res, next) => {
             return res.status(400).json({ error: '商品已下架' })
         }
 
-        if (product.stock < quantity) {
-            return res.status(400).json({ error: '库存不足' })
+        // 如果有规格，查找对应规格
+        let variant = null
+        let unitPrice = parseFloat(product.price)
+
+        if (variantId) {
+            variant = product.variants.find(v => v.id === variantId)
+            if (variant) {
+                unitPrice = parseFloat(variant.price)
+            }
+        }
+
+        // 查询库存计算模式设置
+        const stockModeSetting = await prisma.setting.findUnique({
+            where: { key: 'stockMode' }
+        })
+        const stockMode = stockModeSetting?.value || 'auto'
+
+        let availableStock
+        if (stockMode === 'manual') {
+            // 手动模式：使用商品/规格的 stock 字段
+            availableStock = variant ? (variant.stock || 0) : (product.stock || 0)
+        } else {
+            // 自动模式：使用可用卡密数量
+            availableStock = await prisma.card.count({
+                where: {
+                    productId,
+                    variantId: variantId || null,
+                    status: 'AVAILABLE'
+                }
+            })
+        }
+
+        if (availableStock < quantity) {
+            return res.status(400).json({
+                error: availableStock === 0 ? '该商品暂无库存' : `库存不足，仅剩 ${availableStock} 件`
+            })
         }
 
         // 计算金额
-        const unitPrice = parseFloat(product.price)
         const totalAmount = unitPrice * quantity
+
+        // 构建商品名称（包含规格）
+        const productName = variant ? `${product.name} (${variant.name})` : product.name
 
         // 创建订单
         const order = await prisma.order.create({
@@ -43,7 +80,9 @@ exports.createOrder = async (req, res, next) => {
                 userId,
                 email,
                 productId,
-                productName: product.name,
+                productName,
+                variantId: variant?.id || null,      // 保存规格ID
+                variantName: variant?.name || null,  // 保存规格名称
                 quantity,
                 unitPrice,
                 totalAmount,
@@ -108,17 +147,46 @@ exports.getOrderByNo = async (req, res, next) => {
     try {
         const { orderNo } = req.params
 
-        const order = await prisma.order.findUnique({
+        let order = await prisma.order.findUnique({
             where: { orderNo },
             include: {
                 product: {
                     select: { id: true, name: true, image: true }
+                },
+                cards: {
+                    select: { id: true, content: true }
                 }
             }
         })
 
         if (!order) {
             return res.status(404).json({ error: '订单不存在' })
+        }
+
+        // 检查是否为超时的待支付订单（15分钟）
+        if (order.status === 'PENDING') {
+            const orderAge = Date.now() - new Date(order.createdAt).getTime()
+            const timeoutMs = 15 * 60 * 1000 // 15分钟
+
+            if (orderAge > timeoutMs) {
+                // 自动取消超时订单
+                order = await prisma.order.update({
+                    where: { orderNo },
+                    data: {
+                        status: 'CANCELLED',
+                        cancelledAt: new Date()
+                    },
+                    include: {
+                        product: {
+                            select: { id: true, name: true, image: true }
+                        },
+                        cards: {
+                            select: { id: true, content: true }
+                        }
+                    }
+                })
+                console.log(`订单 ${orderNo} 因超时自动取消`)
+            }
         }
 
         res.json({ order: formatOrder(order) })
@@ -198,7 +266,7 @@ exports.getUserOrders = async (req, res, next) => {
                     select: { id: true, name: true, image: true }
                 },
                 cards: {
-                    where: { status: 'USED' },
+                    where: { status: 'SOLD' },
                     select: { content: true }
                 }
             },
@@ -217,6 +285,38 @@ exports.getUserOrders = async (req, res, next) => {
                 cards: order.cards.map(c => c.content)
             }))
         })
+    } catch (error) {
+        next(error)
+    }
+}
+
+// 取消订单
+exports.cancelOrder = async (req, res, next) => {
+    try {
+        const { orderNo } = req.params
+
+        const order = await prisma.order.findUnique({
+            where: { orderNo }
+        })
+
+        if (!order) {
+            return res.status(404).json({ error: '订单不存在' })
+        }
+
+        if (order.status !== 'PENDING') {
+            return res.status(400).json({ error: '只能取消待支付订单' })
+        }
+
+        // 更新订单状态为已取消
+        await prisma.order.update({
+            where: { orderNo },
+            data: {
+                status: 'CANCELLED',
+                cancelledAt: new Date()
+            }
+        })
+
+        res.json({ message: '订单已取消', orderNo })
     } catch (error) {
         next(error)
     }

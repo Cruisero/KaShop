@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
+import { useAuthStore } from '../../store/authStore'
 import './VerifyEmail.css'
 
 function VerifyEmail() {
     const [searchParams] = useSearchParams()
     const navigate = useNavigate()
+    const { user, updateUser } = useAuthStore()
     const [status, setStatus] = useState('verifying') // verifying, success, error
     const [message, setMessage] = useState('')
 
@@ -27,6 +29,10 @@ function VerifyEmail() {
                 } else {
                     setStatus('success')
                     setMessage(data.message)
+                    // 更新用户状态，标记邮箱已验证
+                    if (user) {
+                        updateUser({ emailVerified: true })
+                    }
                 }
             })
             .catch(err => {

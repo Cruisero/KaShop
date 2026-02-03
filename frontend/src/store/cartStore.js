@@ -6,43 +6,56 @@ export const useCartStore = create(
         (set, get) => ({
             items: [],
 
-            // 添加商品到购物车
-            addItem: (product, quantity = 1) => {
+            // 添加商品到购物车（支持规格）
+            addItem: (product, quantity = 1, variant = null) => {
                 const items = get().items
-                const existingItem = items.find(item => item.id === product.id)
+                // 使用 productId + variantId 作为唯一标识
+                const cartItemId = variant ? `${product.id}-${variant.id}` : product.id
+                const existingItem = items.find(item => item.cartItemId === cartItemId)
+
+                // 构建购物车项目
+                const cartItem = {
+                    ...product,
+                    cartItemId,
+                    variant,
+                    // 如果有规格，使用规格的价格和库存
+                    price: variant?.price || product.price,
+                    stock: variant?.stock ?? product.stock,
+                    variantName: variant?.name || null,
+                }
 
                 if (existingItem) {
                     set({
                         items: items.map(item =>
-                            item.id === product.id
+                            item.cartItemId === cartItemId
                                 ? { ...item, quantity: item.quantity + quantity }
                                 : item
                         )
                     })
                 } else {
                     set({
-                        items: [...items, { ...product, quantity }]
+                        items: [...items, { ...cartItem, quantity }]
                     })
                 }
             },
 
             // 更新商品数量
-            updateQuantity: (productId, quantity) => {
+            updateQuantity: (cartItemId, quantity) => {
                 if (quantity <= 0) {
-                    get().removeItem(productId)
+                    get().removeItem(cartItemId)
                     return
                 }
                 set({
                     items: get().items.map(item =>
-                        item.id === productId ? { ...item, quantity } : item
+                        item.cartItemId === cartItemId ? { ...item, quantity } : item
                     )
                 })
             },
 
             // 移除商品
-            removeItem: (productId) => {
+            removeItem: (cartItemId) => {
                 set({
-                    items: get().items.filter(item => item.id !== productId)
+                    items: get().items.filter(item => item.cartItemId !== cartItemId)
                 })
             },
 

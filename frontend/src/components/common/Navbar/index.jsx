@@ -267,24 +267,24 @@ function Navbar() {
                     )}
                 </div>
 
-                {/* 导航链接 */}
-                <div className="navbar-links">
-                    <Link
-                        to="/"
-                        className={`nav-link ${location.pathname === '/' ? 'active' : ''}`}
-                    >
-                        商品
-                    </Link>
-                    <Link
-                        to="/about"
-                        className={`nav-link ${location.pathname === '/about' ? 'active' : ''}`}
-                    >
-                        关于
-                    </Link>
-                </div>
-
                 {/* 右侧操作 */}
                 <div className="navbar-actions">
+                    {/* 导航链接 */}
+                    <div className="navbar-links">
+                        <Link
+                            to="/"
+                            className={`nav-link ${location.pathname === '/' ? 'active' : ''}`}
+                        >
+                            商品
+                        </Link>
+                        <Link
+                            to="/about"
+                            className={`nav-link ${location.pathname === '/about' ? 'active' : ''}`}
+                        >
+                            关于
+                        </Link>
+                    </div>
+
                     {/* 移动端搜索图标 */}
                     <button
                         className="nav-icon-btn mobile-search-btn"

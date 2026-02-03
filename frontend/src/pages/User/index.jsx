@@ -233,6 +233,22 @@ function OrdersPage() {
                                     {statusMap[order.status]?.label || order.status}
                                 </span>
                                 <span className="order-amount">¥{order.totalAmount.toFixed(2)}</span>
+                                {order.status === 'pending' && (() => {
+                                    const createdAt = new Date(order.createdAt).getTime()
+                                    const expireAt = createdAt + 15 * 60 * 1000 // 15 minutes
+                                    const isExpired = Date.now() > expireAt
+
+                                    return isExpired ? (
+                                        <span className="expired-badge">已过期</span>
+                                    ) : (
+                                        <Link
+                                            to={`/order/${order.orderNo}`}
+                                            className="pay-btn"
+                                        >
+                                            去支付
+                                        </Link>
+                                    )
+                                })()}
                                 {order.status === 'completed' && order.cards?.length > 0 && (
                                     <button
                                         className="view-cards-btn"

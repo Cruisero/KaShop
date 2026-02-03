@@ -53,6 +53,10 @@ app.get('/health', (req, res) => {
 // 初始化定时任务
 initScheduledTasks()
 
+// 启动 USDT 支付监控
+const usdtService = require('./services/usdtService')
+usdtService.startPolling()
+
 // 404 处理
 app.use((req, res) => {
     res.status(404).json({ error: '接口不存在' })

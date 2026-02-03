@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { FiCreditCard, FiMail, FiArrowLeft, FiCheck } from 'react-icons/fi'
 import { useCartStore } from '../../store/cartStore'
@@ -6,12 +6,18 @@ import { useAuthStore } from '../../store/authStore'
 import toast from 'react-hot-toast'
 import './Checkout.css'
 
-// 支付方式
-const paymentMethods = [
-    { id: 'alipay', name: '支付宝', icon: '💳', color: '#1677ff' },
-    { id: 'wechat', name: '微信支付', icon: '💚', color: '#07c160' },
-    { id: 'usdt', name: 'USDT', icon: '💰', color: '#26a17b', disabled: true },
-]
+// 支付方式图标映射
+const paymentIcons = {
+    alipay: '💳',
+    wechat: '💚',
+    usdt: '💰'
+}
+
+const paymentColors = {
+    alipay: '#1677ff',
+    wechat: '#07c160',
+    usdt: '#26a17b'
+}
 
 function Checkout() {
     const navigate = useNavigate()
@@ -22,9 +28,43 @@ function Checkout() {
     const [paymentMethod, setPaymentMethod] = useState('alipay')
     const [loading, setLoading] = useState(false)
     const [agreed, setAgreed] = useState(false)
+    const [paymentMethods, setPaymentMethods] = useState([])
 
     const totalPrice = getTotalPrice()
     const itemCount = items.reduce((sum, item) => sum + item.quantity, 0)
+
+    // 从API获取支付方式
+    useEffect(() => {
+        const fetchPaymentMethods = async () => {
+            try {
+                const res = await fetch('/api/payment/methods')
+                const data = await res.json()
+                if (data.methods) {
+                    // 映射图标和颜色
+                    const methods = data.methods.map(m => ({
+                        ...m,
+                        icon: paymentIcons[m.id] || '💳',
+                        color: paymentColors[m.id] || '#666',
+                        disabled: !m.enabled
+                    }))
+                    setPaymentMethods(methods)
+
+                    // 自动选择第一个启用的支付方式
+                    const firstEnabled = methods.find(m => !m.disabled)
+                    if (firstEnabled) {
+                        setPaymentMethod(firstEnabled.id)
+                    }
+                }
+            } catch (error) {
+                console.error('获取支付方式失败:', error)
+                // 使用默认支付方式
+                setPaymentMethods([
+                    { id: 'alipay', name: '支付宝', icon: '💳', color: '#1677ff', disabled: false }
+                ])
+            }
+        }
+        fetchPaymentMethods()
+    }, [])
 
     if (items.length === 0) {
         return (
@@ -66,6 +106,7 @@ function Checkout() {
                     },
                     body: JSON.stringify({
                         productId: item.id,
+                        variantId: item.variant?.id || null,
                         quantity: item.quantity,
                         email: email,
                         paymentMethod: paymentMethod
@@ -87,7 +128,7 @@ function Checkout() {
             const firstOrder = results[0]
             clearCart()
             toast.success('订单创建成功')
-            navigate(`/order/${firstOrder.orderNo}`)
+            navigate(`/order/${firstOrder.order.orderNo}`)
         } catch (error) {
             console.error('创建订单失败:', error)
             toast.error('创建订单失败，请稍后重试')
@@ -151,23 +192,21 @@ function Checkout() {
                             支付方式
                         </h3>
                         <div className="payment-methods">
-                            {paymentMethods.map((method) => (
+                            {paymentMethods.filter(m => !m.disabled).map((method) => (
                                 <label
                                     key={method.id}
-                                    className={`payment-option ${paymentMethod === method.id ? 'active' : ''} ${method.disabled ? 'disabled' : ''}`}
+                                    className={`payment-option ${paymentMethod === method.id ? 'active' : ''}`}
                                 >
                                     <input
                                         type="radio"
                                         name="paymentMethod"
                                         value={method.id}
                                         checked={paymentMethod === method.id}
-                                        onChange={() => !method.disabled && setPaymentMethod(method.id)}
-                                        disabled={method.disabled}
+                                        onChange={() => setPaymentMethod(method.id)}
                                     />
                                     <span className="payment-icon">{method.icon}</span>
                                     <span className="payment-name">{method.name}</span>
                                     {paymentMethod === method.id && <FiCheck className="check-icon" />}
-                                    {method.disabled && <span className="coming-soon">即将上线</span>}
                                 </label>
                             ))}
                         </div>

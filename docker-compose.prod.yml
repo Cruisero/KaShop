@@ -38,6 +38,13 @@ services:
       - SMTP_USER=${SMTP_USER}
       - SMTP_PASS=${SMTP_PASS}
       - SMTP_FROM=${SMTP_FROM}
+      # Alipay 支付配置
+      - ALIPAY_APP_ID=${ALIPAY_APP_ID}
+      - ALIPAY_GATEWAY=${ALIPAY_GATEWAY:-https://openapi.alipay.com/gateway.do}
+      - ALIPAY_NOTIFY_URL=${ALIPAY_NOTIFY_URL}
+      - ALIPAY_RETURN_URL=${ALIPAY_RETURN_URL}
+      - ALIPAY_PUBLIC_KEY=${ALIPAY_PUBLIC_KEY}
+      - ALIPAY_PRIVATE_KEY=${ALIPAY_PRIVATE_KEY}
     depends_on:
       mysql:
         condition: service_healthy

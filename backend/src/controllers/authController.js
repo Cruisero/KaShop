@@ -131,6 +131,7 @@ exports.getCurrentUser = async (req, res, next) => {
                 username: true,
                 role: true,
                 avatar: true,
+                emailVerified: true,
                 createdAt: true
             }
         })
@@ -296,6 +297,93 @@ exports.changePassword = async (req, res, next) => {
         })
 
         res.json({ message: '密码修改成功' })
+    } catch (error) {
+        next(error)
+    }
+}
+
+// 请求重置密码（忘记密码）
+exports.forgotPassword = async (req, res, next) => {
+    try {
+        const { email } = req.body
+
+        if (!email) {
+            return res.status(400).json({ error: '请输入邮箱地址' })
+        }
+
+        const user = await prisma.user.findUnique({
+            where: { email }
+        })
+
+        // 即使用户不存在也返回成功，防止邮箱枚举攻击
+        if (!user) {
+            return res.json({ message: '如果该邮箱已注册，您将收到重置密码邮件' })
+        }
+
+        // 生成重置 token
+        const crypto = require('crypto')
+        const resetToken = crypto.randomBytes(32).toString('hex')
+        const resetTokenExpiry = new Date(Date.now() + 30 * 60 * 1000) // 30分钟有效
+
+        await prisma.user.update({
+            where: { id: user.id },
+            data: { resetToken, resetTokenExpiry }
+        })
+
+        // 发送重置密码邮件
+        const emailService = require('../services/emailService')
+        const baseUrl = req.headers.origin || 'https://haodongxi.shop'
+        const result = await emailService.sendPasswordResetEmail(user, resetToken, baseUrl)
+
+        if (result.success) {
+            res.json({ message: '重置密码邮件已发送，请查收' })
+        } else {
+            console.error('发送重置邮件失败:', result.error)
+            res.status(500).json({ error: '邮件发送失败，请稍后重试' })
+        }
+    } catch (error) {
+        next(error)
+    }
+}
+
+// 重置密码
+exports.resetPassword = async (req, res, next) => {
+    try {
+        const { token, password } = req.body
+
+        if (!token || !password) {
+            return res.status(400).json({ error: '请填写完整信息' })
+        }
+
+        if (password.length < 6) {
+            return res.status(400).json({ error: '密码至少6位' })
+        }
+
+        const user = await prisma.user.findFirst({
+            where: {
+                resetToken: token,
+                resetTokenExpiry: {
+                    gt: new Date()
+                }
+            }
+        })
+
+        if (!user) {
+            return res.status(400).json({ error: '重置链接无效或已过期' })
+        }
+
+        // 更新密码并清除 token
+        const hashedPassword = await bcrypt.hash(password, 10)
+        await prisma.user.update({
+            where: { id: user.id },
+            data: {
+                password: hashedPassword,
+                resetToken: null,
+                resetTokenExpiry: null
+            }
+        })
+
+        res.json({ message: '密码重置成功，请使用新密码登录' })
     } catch (error) {
         next(error)
     }

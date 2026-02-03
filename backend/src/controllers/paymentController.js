@@ -2,18 +2,41 @@
 const prisma = require('../config/database')
 const { dispenseCards } = require('./cardController')
 const logger = require('../utils/logger')
+const alipayService = require('../services/alipayService')
 
-// 支付方式配置
-const paymentMethods = [
-    { id: 'alipay', name: '支付宝', icon: 'alipay', enabled: true },
-    { id: 'wechat', name: '微信支付', icon: 'wechat', enabled: true },
-    { id: 'usdt', name: 'USDT', icon: 'usdt', enabled: false }
+// 支付方式配置（默认值）
+const defaultPaymentMethods = [
+    { id: 'alipay', name: '支付宝', icon: 'alipay', settingKey: 'alipayEnabled' },
+    { id: 'wechat', name: '微信支付', icon: 'wechat', settingKey: 'wechatEnabled' },
+    { id: 'usdt', name: 'USDT-TRC20', icon: 'usdt', settingKey: 'usdtEnabled' }
 ]
 
-// 获取支付方式列表
+// 获取支付方式列表（从数据库读取启用状态）
 exports.getPaymentMethods = async (req, res, next) => {
     try {
-        res.json({ methods: paymentMethods })
+        // 获取支付相关设置
+        const settings = await prisma.setting.findMany({
+            where: {
+                key: {
+                    in: ['alipayEnabled', 'wechatEnabled', 'usdtEnabled']
+                }
+            }
+        })
+
+        const settingsMap = {}
+        settings.forEach(s => {
+            settingsMap[s.key] = s.value === 'true'
+        })
+
+        // 构建支付方式列表，根据设置决定启用状态
+        const methods = defaultPaymentMethods.map(method => ({
+            id: method.id,
+            name: method.name,
+            icon: method.icon,
+            enabled: settingsMap[method.settingKey] ?? (method.id === 'alipay') // 默认只支付宝启用
+        }))
+
+        res.json({ methods })
     } catch (error) {
         next(error)
     }
@@ -52,17 +75,38 @@ exports.createPayment = async (req, res, next) => {
             }
         })
 
-        // 根据支付方式生成支付链接
-        let payUrl = ''
+        // 根据支付方式生成支付信息
+        let paymentData = {}
         if (paymentMethod === 'alipay') {
-            payUrl = await generateAlipayUrl(order, payment)
+            // 使用当面付二维码
+            const result = await generateAlipayQrCode(order, payment)
+            paymentData = {
+                paymentType: 'qrcode',
+                qrCode: result.qrCode,
+                payUrl: null
+            }
         } else if (paymentMethod === 'wechat') {
-            payUrl = await generateWechatUrl(order, payment)
+            const payUrl = await generateWechatUrl(order, payment)
+            paymentData = {
+                paymentType: 'redirect',
+                qrCode: null,
+                payUrl
+            }
+        } else if (paymentMethod === 'usdt') {
+            const usdtService = require('../services/usdtService')
+            const usdtInfo = await usdtService.createUsdtPayment(order)
+            paymentData = {
+                paymentType: 'usdt',
+                walletAddress: usdtInfo.walletAddress,
+                usdtAmount: usdtInfo.usdtAmount,
+                qrContent: usdtInfo.qrContent,
+                exchangeRate: usdtInfo.exchangeRate
+            }
         }
 
         res.json({
             paymentId: payment.id,
-            payUrl,
+            ...paymentData,
             orderNo: order.orderNo,
             amount: parseFloat(order.totalAmount)
         })
@@ -71,16 +115,41 @@ exports.createPayment = async (req, res, next) => {
     }
 }
 
-// 生成支付宝支付链接 (模拟)
+// 生成支付宝二维码（当面付）
+async function generateAlipayQrCode(order, payment) {
+    try {
+        const result = await alipayService.createQrCodePayment({
+            orderNo: order.orderNo,
+            totalAmount: order.totalAmount,
+            productName: order.productName
+        })
+        return result
+    } catch (error) {
+        logger.error('支付宝二维码生成失败:', error)
+        throw error
+    }
+}
+
+// 生成支付宝支付链接 (备用)
 async function generateAlipayUrl(order, payment) {
-    // 实际项目中这里接入支付宝 SDK
-    // 现在返回一个模拟的支付页面
-    const params = new URLSearchParams({
-        orderNo: order.orderNo,
-        amount: order.totalAmount.toString(),
-        subject: order.productName
-    })
-    return `/api/payment/mock?${params.toString()}`
+    try {
+        // 使用支付宝SDK生成支付链接
+        const payUrl = await alipayService.createPagePayment({
+            orderNo: order.orderNo,
+            totalAmount: order.totalAmount,
+            productName: order.productName
+        })
+        return payUrl
+    } catch (error) {
+        logger.error('支付宝支付链接生成失败:', error)
+        // 如果SDK调用失败，返回模拟支付页面
+        const params = new URLSearchParams({
+            orderNo: order.orderNo,
+            amount: order.totalAmount.toString(),
+            subject: order.productName
+        })
+        return `/api/payment/mock?${params.toString()}`
+    }
 }
 
 // 生成微信支付链接 (模拟)
@@ -96,9 +165,17 @@ async function generateWechatUrl(order, payment) {
 // 支付宝回调
 exports.alipayCallback = async (req, res, next) => {
     try {
-        const { out_trade_no, trade_no, trade_status } = req.body
+        const params = req.body
+        const { out_trade_no, trade_no, trade_status } = params
 
         logger.info('支付宝回调:', { out_trade_no, trade_no, trade_status })
+
+        // 验证签名
+        const signValid = alipayService.verifyCallback(params)
+        if (!signValid) {
+            logger.warn('支付宝回调验签失败:', { out_trade_no })
+            return res.send('fail')
+        }
 
         if (trade_status === 'TRADE_SUCCESS' || trade_status === 'TRADE_FINISHED') {
             await processPaymentSuccess(out_trade_no, trade_no, 'alipay')
@@ -165,7 +242,7 @@ async function processPaymentSuccess(orderNo, tradeNo, paymentMethod) {
     // 发放卡密
     let cards = []
     try {
-        cards = await dispenseCards(order.id, order.productId, order.quantity)
+        cards = await dispenseCards(order.id, order.productId, order.quantity, order.variantId)
 
         // 更新订单为已完成
         await prisma.order.update({
@@ -178,44 +255,30 @@ async function processPaymentSuccess(orderNo, tradeNo, paymentMethod) {
 
         logger.info(`订单 ${orderNo} 卡密发放成功`)
     } catch (error) {
-        logger.error(`订单 ${orderNo} 卡密发放失败:`, error)
+        // 无卡密可发放，订单保持 PAID 状态，等待管理员手动发货
+        logger.warn(`订单 ${orderNo} 无可用卡密，等待管理员手动发货: ${error.message}`)
     }
 
-    // 发送邮件通知
-    try {
-        const emailService = require('../services/emailService')
+    // 只有成功发放卡密时才发送邮件
+    // 无卡密的订单等管理员手动发货时再发送邮件
+    if (cards && cards.length > 0) {
+        try {
+            const emailService = require('../services/emailService')
 
-        // 获取延时发送设置
-        const settings = await prisma.setting.findMany({
-            where: { key: { in: ['delayedDelivery', 'delayedDeliveryMinutes'] } }
-        })
-        const delayedDelivery = settings.find(s => s.key === 'delayedDelivery')?.value === 'true'
-        const delayMinutes = parseInt(settings.find(s => s.key === 'delayedDeliveryMinutes')?.value) || 5
+            // 获取完整订单信息
+            const fullOrder = await prisma.order.findUnique({
+                where: { id: order.id },
+                include: { product: true, cards: true }
+            })
 
-        // 获取完整订单信息
-        const fullOrder = await prisma.order.findUnique({
-            where: { id: order.id },
-            include: { product: true, cards: true }
-        })
-
-        // 判断是否需要延时发送（无卡密商品）
-        if (delayedDelivery && (!cards || cards.length === 0)) {
-            logger.info(`订单 ${orderNo} 将在 ${delayMinutes} 分钟后发送邮件通知`)
-            setTimeout(async () => {
-                try {
-                    await emailService.sendOrderCompletedEmail(fullOrder, fullOrder.cards)
-                    logger.info(`订单 ${orderNo} 延时邮件发送成功`)
-                } catch (err) {
-                    logger.error(`订单 ${orderNo} 延时邮件发送失败:`, err)
-                }
-            }, delayMinutes * 60 * 1000)
-        } else {
-            // 立即发送邮件
+            // 发送邮件通知
             await emailService.sendOrderCompletedEmail(fullOrder, fullOrder.cards)
             logger.info(`订单 ${orderNo} 邮件通知已发送`)
+        } catch (error) {
+            logger.error(`订单 ${orderNo} 邮件发送失败:`, error)
         }
-    } catch (error) {
-        logger.error(`订单 ${orderNo} 邮件发送失败:`, error)
+    } else {
+        logger.info(`订单 ${orderNo} 无卡密，等待管理员手动发货后发送邮件`)
     }
 }
 

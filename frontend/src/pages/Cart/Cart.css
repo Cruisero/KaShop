@@ -129,6 +129,14 @@
     color: var(--primary-light);
 }
 
+.item-variant {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--primary);
+    margin-bottom: 4px;
+    font-weight: 500;
+}
+
 .item-desc {
     font-size: 0.85rem;
     color: var(--text-muted);
