@@ -794,74 +794,8 @@ function ProductsManage() {
                                     rows={6}
                                 />
                             </div>
-                            {/* 无规格时显示价格和库存输入 */}
-                            {!(formData.variants.length > 0 && formData.variants.some(v => v.name)) && (
-                                <div className="form-row">
-                                    <div className="form-group">
-                                        <label>售价 *</label>
-                                        <input
-                                            type="number"
-                                            name="price"
-                                            value={formData.price}
-                                            onChange={handleChange}
-                                            placeholder="0.00"
-                                            step="0.01"
-                                            required
-                                        />
-                                    </div>
-                                    <div className="form-group">
-                                        <label>原价</label>
-                                        <input
-                                            type="number"
-                                            name="originalPrice"
-                                            value={formData.originalPrice}
-                                            onChange={handleChange}
-                                            placeholder="0.00"
-                                            step="0.01"
-                                        />
-                                    </div>
-                                    {stockMode === 'manual' && (
-                                        <div className="form-group">
-                                            <label>库存 *</label>
-                                            <input
-                                                type="number"
-                                                name="stock"
-                                                value={formData.stock}
-                                                onChange={handleChange}
-                                                placeholder="0"
-                                                min="0"
-                                                required
-                                            />
-                                            <span style={{ fontSize: '0.8rem', color: '#999' }}>手动设置库存，与卡密数量无关</span>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-                            <div className="form-group">
-                                <label>商品类别 *</label>
-                                <CustomSelect
-                                    name="categoryId"
-                                    value={formData.categoryId}
-                                    onChange={handleChange}
-                                    placeholder="请选择类别"
-                                    options={categories.map(cat => ({
-                                        value: cat.id,
-                                        label: `${cat.icon} ${cat.name}`
-                                    }))}
-                                />
-                            </div>
-                            <div className="form-group">
-                                <label>商品标签 <span style={{ color: '#999', fontWeight: 'normal' }}>(多个标签用逗号分隔，如：热销, 推荐, 限时)</span></label>
-                                <input
-                                    type="text"
-                                    name="tags"
-                                    value={formData.tags}
-                                    onChange={handleChange}
-                                    placeholder="热销, 推荐, 限时优惠"
-                                />
-                            </div>
 
-                            {/* 商品规格 */}
+                            {/* 商品规格 - 放在价格上方 */}
                             <div className="form-group variants-section">
                                 <label>
                                     商品规格
@@ -943,6 +877,74 @@ function ProductsManage() {
                                 >
                                     + 添加规格
                                 </button>
+                            </div>
+
+                            {/* 无规格时显示价格和库存输入 */}
+                            {!(formData.variants.length > 0 && formData.variants.some(v => v.name)) && (
+                                <div className="form-row">
+                                    <div className="form-group">
+                                        <label>售价 *</label>
+                                        <input
+                                            type="number"
+                                            name="price"
+                                            value={formData.price}
+                                            onChange={handleChange}
+                                            placeholder="0.00"
+                                            step="0.01"
+                                            required
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label>原价</label>
+                                        <input
+                                            type="number"
+                                            name="originalPrice"
+                                            value={formData.originalPrice}
+                                            onChange={handleChange}
+                                            placeholder="0.00"
+                                            step="0.01"
+                                        />
+                                    </div>
+                                    {stockMode === 'manual' && (
+                                        <div className="form-group">
+                                            <label>库存 *</label>
+                                            <input
+                                                type="number"
+                                                name="stock"
+                                                value={formData.stock}
+                                                onChange={handleChange}
+                                                placeholder="0"
+                                                min="0"
+                                                required
+                                            />
+                                            <span style={{ fontSize: '0.8rem', color: '#999' }}>手动设置库存，与卡密数量无关</span>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            <div className="form-group">
+                                <label>商品类别 *</label>
+                                <CustomSelect
+                                    name="categoryId"
+                                    value={formData.categoryId}
+                                    onChange={handleChange}
+                                    placeholder="请选择类别"
+                                    options={categories.map(cat => ({
+                                        value: cat.id,
+                                        label: `${cat.icon} ${cat.name}`
+                                    }))}
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label>商品标签 <span style={{ color: '#999', fontWeight: 'normal' }}>(多个标签用逗号分隔，如：热销, 推荐, 限时)</span></label>
+                                <input
+                                    type="text"
+                                    name="tags"
+                                    value={formData.tags}
+                                    onChange={handleChange}
+                                    placeholder="热销, 推荐, 限时优惠"
+                                />
                             </div>
                             <div className="form-group">
                                 <label>商品图片 <span className="upload-count">({formData.images.length} 已上传, {pendingImages.length} 待上传)</span></label>
