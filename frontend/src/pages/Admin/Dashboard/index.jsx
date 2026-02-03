@@ -1282,7 +1282,7 @@ function OrdersManage() {
                             </td>
                             <td className="time">{formatTime(order.createdAt)}</td>
                             <td className="actions">
-                                {order.status === 'PAID' && (
+                                {order.status?.toUpperCase() === 'PAID' && (
                                     <button
                                         className="action-btn ship"
                                         onClick={() => handleShip(order)}
