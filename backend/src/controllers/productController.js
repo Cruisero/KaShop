@@ -26,16 +26,36 @@ exports.getProducts = async (req, res, next) => {
         }
 
         // 搜索功能 - 支持商品名称、描述、分类名、标签
+        let tagMatchIds = []
         if (search && search.trim()) {
             const searchTerm = search.trim()
-            where.OR = [
+
+            // 先用原生 SQL 查询标签匹配的商品 ID（MySQL JSON_CONTAINS）
+            try {
+                const tagResults = await prisma.$queryRaw`
+                    SELECT id FROM products 
+                    WHERE status = 'ACTIVE' 
+                    AND JSON_CONTAINS(tags, JSON_QUOTE(${searchTerm}))
+                `
+                tagMatchIds = tagResults.map(r => r.id)
+            } catch (e) {
+                // 忽略 JSON 查询错误
+            }
+
+            // 组合搜索条件
+            const orConditions = [
                 { name: { contains: searchTerm } },
                 { description: { contains: searchTerm } },
                 // 搜索分类名称
-                { category: { name: { contains: searchTerm } } },
-                // 搜索标签 (tags 存储为 JSON 字符串)
-                { tags: { string_contains: searchTerm } }
+                { category: { name: { contains: searchTerm } } }
             ]
+
+            // 如果有标签匹配的商品，加入搜索条件
+            if (tagMatchIds.length > 0) {
+                orConditions.push({ id: { in: tagMatchIds } })
+            }
+
+            where.OR = orConditions
         }
 
         // 排序配置
