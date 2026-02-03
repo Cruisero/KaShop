@@ -433,7 +433,7 @@
 
 /* 规格选择器 */
 .variant-selector {
-    display: flex;
+    display: inline-flex;
     flex-direction: column;
     gap: 16px;
     padding: 20px;
@@ -441,6 +441,7 @@
     border: 1px solid var(--border-color);
     border-radius: var(--radius-md);
     margin-bottom: 24px;
+    width: fit-content;
 }
 
 /* 规格行 - 类型和规格分开 */
