@@ -434,37 +434,78 @@
 /* 规格选择器 */
 .variant-selector {
     display: flex;
-    align-items: flex-start;
+    flex-direction: column;
     gap: 16px;
-    padding: 16px 0;
-    border-bottom: 1px solid var(--border-color);
-    margin-bottom: 8px;
+    padding: 20px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    margin-bottom: 24px;
+}
+
+/* 规格行 - 类型和规格分开 */
+.variant-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 20px;
 }
 
 .variant-label {
     color: var(--text-secondary);
-    font-size: 0.95rem;
+    font-size: 0.9rem;
+    font-weight: 500;
     flex-shrink: 0;
-    padding-top: 8px;
+    min-width: 50px;
+    padding-top: 10px;
 }
 
 .variant-options {
     display: flex;
     flex-wrap: wrap;
     gap: 10px;
+    flex: 1;
 }
 
+/* 类型按钮 - 简洁风格 */
+.variant-row:first-child .variant-option {
+    padding: 10px 24px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+
+.variant-row:first-child .variant-option:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+    background: rgba(239, 68, 68, 0.05);
+}
+
+.variant-row:first-child .variant-option.active {
+    border-color: var(--primary);
+    background: var(--primary);
+    color: white;
+}
+
+/* 规格按钮 - 带价格 */
 .variant-option {
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: center;
     padding: 12px 20px;
+    min-width: 90px;
     background: var(--bg-secondary);
     border: 2px solid var(--border-color);
     border-radius: var(--radius-md);
     cursor: pointer;
     transition: all var(--transition-fast);
-    min-width: 100px;
+    font-size: 0.95rem;
+    color: var(--text-primary);
 }
 
 .variant-option:hover {
@@ -475,12 +516,27 @@
 .variant-option.active {
     border-color: var(--primary);
     background: rgba(239, 68, 68, 0.1);
-    color: var(--primary);
 }
 
 .variant-option .variant-price {
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     color: var(--primary);
     margin-top: 4px;
     font-weight: 600;
+}
+
+.variant-option.active .variant-price {
+    color: var(--primary);
+}
+
+/* 响应式 */
+@media (max-width: 600px) {
+    .variant-row {
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .variant-label {
+        padding-top: 0;
+    }
 }
