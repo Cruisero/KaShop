@@ -25,11 +25,16 @@ exports.getProducts = async (req, res, next) => {
             where.categoryId = catId
         }
 
-        // 搜索功能
+        // 搜索功能 - 支持商品名称、描述、分类名、标签
         if (search && search.trim()) {
+            const searchTerm = search.trim()
             where.OR = [
-                { name: { contains: search.trim() } },
-                { description: { contains: search.trim() } }
+                { name: { contains: searchTerm } },
+                { description: { contains: searchTerm } },
+                // 搜索分类名称
+                { category: { name: { contains: searchTerm } } },
+                // 搜索标签 (tags 存储为 JSON 字符串)
+                { tags: { string_contains: searchTerm } }
             ]
         }
 
