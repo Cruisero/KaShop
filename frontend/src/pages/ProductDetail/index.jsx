@@ -52,6 +52,23 @@ function ProductDetail() {
                         variants: data.variants || [],
                     }
                     setProduct(formattedProduct)
+
+                    // 设置默认选中的类型和规格
+                    const variants = formattedProduct.variants
+                    if (variants && variants.length > 0) {
+                        const hasTypes = variants.some(v => v.type && v.type.trim() !== '')
+                        if (hasTypes) {
+                            // 有类型分组，选择第一个类型和该类型下的第一个规格
+                            const types = [...new Set(variants.map(v => v.type || '').filter(Boolean))]
+                            const firstType = types[0] || ''
+                            setSelectedType(firstType)
+                            const firstVariant = variants.find(v => v.type === firstType)
+                            setSelectedVariant(firstVariant || null)
+                        } else {
+                            // 无类型分组，直接选择第一个规格
+                            setSelectedVariant(variants[0])
+                        }
+                    }
                 } else {
                     setProduct(null)
                 }

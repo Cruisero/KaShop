@@ -437,9 +437,7 @@
     flex-direction: column;
     gap: 16px;
     padding: 20px;
-    background: var(--bg-card);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
+    background: transparent;
     margin-bottom: 24px;
     width: fit-content;
 }
