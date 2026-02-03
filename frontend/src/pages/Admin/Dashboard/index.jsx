@@ -1200,23 +1200,16 @@ function OrdersManage() {
         }
     }
 
-    const handleShip = async (order) => {
-        showConfirm(
-            '确认发货',
-            `确定要为订单 ${order.orderNo} 发货吗？发货后将自动发送邮件通知客户。`,
-            async () => {
-                await doShip(order.id)
-            }
-        )
+    // 点击发货按钮，直接弹出发货弹窗
+    const handleShip = (order) => {
+        setCardInputOrder(order)
+        setCardInputContent('')
+        setShowCardInputModal(true)
     }
 
-    // 提交手动输入的卡密
-    const handleSubmitCardInput = async () => {
-        if (!cardInputContent.trim()) {
-            showToast('请输入卡密内容', 'error')
-            return
-        }
-        await doShip(cardInputOrder.id, cardInputContent)
+    // 提交发货
+    const handleSubmitShip = async () => {
+        await doShip(cardInputOrder.id, cardInputContent || null)
     }
 
     const formatTime = (dateStr) => {
@@ -1276,8 +1269,8 @@ function OrdersManage() {
                             <td>¥{parseFloat(order.totalAmount).toFixed(2)}</td>
                             <td>{order.email}</td>
                             <td>
-                                <span className={`status-badge ${statusMap[order.status]?.class || order.status?.toLowerCase()}`}>
-                                    {statusMap[order.status]?.label || order.status}
+                                <span className={`status-badge ${statusMap[order.status?.toUpperCase()]?.class || order.status?.toLowerCase()}`}>
+                                    {statusMap[order.status?.toUpperCase()]?.label || order.status}
                                 </span>
                             </td>
                             <td className="time">{formatTime(order.createdAt)}</td>
@@ -1301,49 +1294,91 @@ function OrdersManage() {
                 </tbody>
             </table>
 
-            {/* 卡密输入弹窗 */}
+            {/* 发货弹窗 - 优化UI */}
             {showCardInputModal && cardInputOrder && (
-                <div className="modal-overlay" onClick={() => setShowCardInputModal(false)}>
-                    <div className="modal-content" onClick={e => e.stopPropagation()}>
-                        <div className="modal-header">
-                            <h3>手动发货 - 输入卡密</h3>
-                            <button className="modal-close" onClick={() => setShowCardInputModal(false)}>×</button>
+                <div className="ship-modal-overlay" onClick={() => setShowCardInputModal(false)}>
+                    <div className="ship-modal" onClick={e => e.stopPropagation()}>
+                        <div className="ship-modal-header">
+                            <div className="ship-modal-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <path d="M20 12v6a2 2 0 01-2 2H6a2 2 0 01-2-2v-6M12 3v12M8 7l4-4 4 4" />
+                                </svg>
+                            </div>
+                            <h3>手动发货</h3>
+                            <p className="ship-modal-subtitle">订单 {cardInputOrder.orderNo}</p>
+                            <button className="ship-modal-close" onClick={() => setShowCardInputModal(false)}>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <path d="M18 6L6 18M6 6l12 12" />
+                                </svg>
+                            </button>
                         </div>
-                        <div className="modal-body">
-                            <div className="form-group">
-                                <label>订单号</label>
-                                <input type="text" value={cardInputOrder.orderNo} disabled />
+
+                        <div className="ship-modal-body">
+                            <div className="order-info-card">
+                                <div className="order-info-row">
+                                    <span className="order-info-label">商品名称</span>
+                                    <span className="order-info-value">{cardInputOrder.productName}</span>
+                                </div>
+                                <div className="order-info-row">
+                                    <span className="order-info-label">购买数量</span>
+                                    <span className="order-info-value highlight">{cardInputOrder.quantity} 件</span>
+                                </div>
+                                <div className="order-info-row">
+                                    <span className="order-info-label">客户邮箱</span>
+                                    <span className="order-info-value">{cardInputOrder.email}</span>
+                                </div>
                             </div>
-                            <div className="form-group">
-                                <label>商品</label>
-                                <input type="text" value={cardInputOrder.productName} disabled />
-                            </div>
-                            <div className="form-group">
-                                <label>数量</label>
-                                <input type="text" value={cardInputOrder.quantity} disabled />
-                            </div>
-                            <div className="form-group">
-                                <label>卡密内容 <span className="hint">(每行一个，最多 {cardInputOrder.quantity} 个)</span></label>
+
+                            <div className="card-input-section">
+                                <label className="card-input-label">
+                                    <span className="card-icon">🎫</span>
+                                    卡密内容
+                                    <span className="card-hint">每行一个，最多 {cardInputOrder.quantity} 个</span>
+                                </label>
                                 <textarea
+                                    className="card-input-textarea"
                                     value={cardInputContent}
                                     onChange={(e) => setCardInputContent(e.target.value)}
-                                    placeholder="请输入卡密内容，每行一个"
-                                    rows={5}
+                                    placeholder={`请输入卡密内容...\n每行一个卡密`}
+                                    rows={6}
                                     autoFocus
                                 />
                             </div>
-                            <div className="setting-notice" style={{ marginTop: '10px' }}>
-                                💡 发货后将自动发送邮件通知客户，邮件中包含卡密信息
+
+                            <div className="ship-notice">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <circle cx="12" cy="12" r="10" />
+                                    <path d="M12 16v-4M12 8h.01" />
+                                </svg>
+                                <span>发货后将自动发送邮件通知客户，邮件中包含卡密信息</span>
                             </div>
                         </div>
-                        <div className="modal-footer">
-                            <button className="btn btn-secondary" onClick={() => setShowCardInputModal(false)}>取消</button>
+
+                        <div className="ship-modal-footer">
                             <button
-                                className="btn btn-primary"
-                                onClick={handleSubmitCardInput}
-                                disabled={shipping === cardInputOrder.id}
+                                className="ship-btn ship-btn-cancel"
+                                onClick={() => setShowCardInputModal(false)}
                             >
-                                {shipping === cardInputOrder.id ? '发货中...' : '确认发货'}
+                                取消
+                            </button>
+                            <button
+                                className="ship-btn ship-btn-confirm"
+                                onClick={handleSubmitShip}
+                                disabled={shipping === cardInputOrder.id || !cardInputContent.trim()}
+                            >
+                                {shipping === cardInputOrder.id ? (
+                                    <>
+                                        <span className="loading-spinner"></span>
+                                        发货中...
+                                    </>
+                                ) : (
+                                    <>
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                            <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
+                                        </svg>
+                                        确认发货
+                                    </>
+                                )}
                             </button>
                         </div>
                     </div>
