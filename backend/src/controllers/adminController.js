@@ -154,6 +154,10 @@ exports.createProduct = async (req, res, next) => {
                     productData.originalPrice = Math.max(...originalPrices)
                 }
 
+                // 库存为各规格库存之和
+                const totalStock = validVariants.reduce((sum, v) => sum + (parseInt(v.stock) || 0), 0)
+                productData.stock = totalStock
+
                 productData.variants = {
                     create: validVariants.map((v, index) => ({
                         name: v.name,
@@ -236,12 +240,16 @@ exports.updateProduct = async (req, res, next) => {
                             .filter(p => p > 0)
                         const maxOriginalPrice = originalPrices.length > 0 ? Math.max(...originalPrices) : null
 
-                        // 更新商品价格
+                        // 库存为各规格库存之和
+                        const totalStock = validVariants.reduce((sum, v) => sum + (parseInt(v.stock) || 0), 0)
+
+                        // 更新商品价格和库存
                         await tx.product.update({
                             where: { id },
                             data: {
                                 price: minPrice,
-                                originalPrice: maxOriginalPrice
+                                originalPrice: maxOriginalPrice,
+                                stock: totalStock
                             }
                         })
 

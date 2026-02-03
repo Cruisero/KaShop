@@ -837,7 +837,8 @@ function ProductsManage() {
                                         </div>
                                     </>
                                 )}
-                                {stockMode === 'manual' && (
+                                {/* 有规格时隐藏库存输入，库存由各规格决定 */}
+                                {stockMode === 'manual' && !(formData.variants.length > 0 && formData.variants.some(v => v.name)) && (
                                     <div className="form-group">
                                         <label>库存 *</label>
                                         <input
