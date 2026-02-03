@@ -25,8 +25,8 @@ function ToastProvider({ children }) {
         }, duration)
     }
 
-    const showConfirm = (title, message, onConfirm) => {
-        setConfirmDialog({ title, message, onConfirm })
+    const showConfirm = (title, message, onConfirm, confirmText = '确认') => {
+        setConfirmDialog({ title, message, onConfirm, confirmText })
     }
 
     const closeConfirm = () => setConfirmDialog(null)
@@ -70,8 +70,8 @@ function ToastProvider({ children }) {
                             <button className="btn btn-cancel" onClick={closeConfirm}>
                                 取消
                             </button>
-                            <button className="btn btn-danger" onClick={handleConfirm}>
-                                确认删除
+                            <button className="btn btn-primary" onClick={handleConfirm}>
+                                {confirmDialog.confirmText || '确认'}
                             </button>
                         </div>
                     </div>
