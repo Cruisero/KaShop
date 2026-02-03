@@ -794,66 +794,49 @@ function ProductsManage() {
                                     rows={6}
                                 />
                             </div>
-                            <div className="form-row">
-                                {/* 有规格时隐藏默认价格，使用规格价格 */}
-                                {formData.variants.length > 0 && formData.variants.some(v => v.name) ? (
-                                    <div className="form-group" style={{ flex: 1 }}>
-                                        <label>售价</label>
-                                        <div style={{
-                                            padding: '12px 16px',
-                                            background: 'linear-gradient(135deg, #fef3c7 0%, #fef9c3 100%)',
-                                            borderRadius: '8px',
-                                            border: '1px solid #fcd34d',
-                                            color: '#92400e',
-                                            fontSize: '0.9rem'
-                                        }}>
-                                            💡 已添加商品规格，价格由各规格决定
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <>
-                                        <div className="form-group">
-                                            <label>售价 *</label>
-                                            <input
-                                                type="number"
-                                                name="price"
-                                                value={formData.price}
-                                                onChange={handleChange}
-                                                placeholder="0.00"
-                                                step="0.01"
-                                                required
-                                            />
-                                        </div>
-                                        <div className="form-group">
-                                            <label>原价</label>
-                                            <input
-                                                type="number"
-                                                name="originalPrice"
-                                                value={formData.originalPrice}
-                                                onChange={handleChange}
-                                                placeholder="0.00"
-                                                step="0.01"
-                                            />
-                                        </div>
-                                    </>
-                                )}
-                                {/* 有规格时隐藏库存输入，库存由各规格决定 */}
-                                {stockMode === 'manual' && !(formData.variants.length > 0 && formData.variants.some(v => v.name)) && (
+                            {/* 无规格时显示价格和库存输入 */}
+                            {!(formData.variants.length > 0 && formData.variants.some(v => v.name)) && (
+                                <div className="form-row">
                                     <div className="form-group">
-                                        <label>库存 *</label>
+                                        <label>售价 *</label>
                                         <input
                                             type="number"
-                                            name="stock"
-                                            value={formData.stock}
+                                            name="price"
+                                            value={formData.price}
                                             onChange={handleChange}
-                                            placeholder="0"
-                                            min="0"
+                                            placeholder="0.00"
+                                            step="0.01"
                                             required
                                         />
-                                        <span style={{ fontSize: '0.8rem', color: '#999' }}>手动设置库存，与卡密数量无关</span>
                                     </div>
-                                )}
-                            </div>
+                                    <div className="form-group">
+                                        <label>原价</label>
+                                        <input
+                                            type="number"
+                                            name="originalPrice"
+                                            value={formData.originalPrice}
+                                            onChange={handleChange}
+                                            placeholder="0.00"
+                                            step="0.01"
+                                        />
+                                    </div>
+                                    {stockMode === 'manual' && (
+                                        <div className="form-group">
+                                            <label>库存 *</label>
+                                            <input
+                                                type="number"
+                                                name="stock"
+                                                value={formData.stock}
+                                                onChange={handleChange}
+                                                placeholder="0"
+                                                min="0"
+                                                required
+                                            />
+                                            <span style={{ fontSize: '0.8rem', color: '#999' }}>手动设置库存，与卡密数量无关</span>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                             <div className="form-group">
                                 <label>商品类别 *</label>
                                 <CustomSelect
