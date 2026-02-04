@@ -9,6 +9,7 @@ const cardRoutes = require('./card.routes')
 const paymentRoutes = require('./payment.routes')
 const adminRoutes = require('./admin.routes')
 const uploadRoutes = require('./upload.routes')
+const ticketRoutes = require('./ticket.routes')
 
 // API 版本信息
 router.get('/', (req, res) => {
@@ -42,5 +43,8 @@ router.use('/admin', adminRoutes)
 
 // 上传路由
 router.use('/upload', uploadRoutes)
+
+// 工单路由
+router.use('/tickets', ticketRoutes)
 
 module.exports = router

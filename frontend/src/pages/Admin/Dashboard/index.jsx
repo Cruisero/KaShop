@@ -5,7 +5,7 @@ import {
     FiUsers, FiSettings, FiLogOut, FiMenu, FiX,
     FiTrendingUp, FiDollarSign, FiBox, FiActivity,
     FiCheckCircle, FiAlertCircle, FiInfo, FiAlertTriangle,
-    FiChevronDown, FiCheck, FiImage
+    FiChevronDown, FiCheck, FiImage, FiMessageCircle
 } from 'react-icons/fi'
 import { useAuthStore } from '../../../store/authStore'
 import './Dashboard.css'
@@ -171,6 +171,7 @@ const menuItems = [
     { path: '/admin', icon: FiHome, label: '仪表盘', exact: true },
     { path: '/admin/products', icon: FiPackage, label: '商品管理' },
     { path: '/admin/orders', icon: FiShoppingBag, label: '订单管理' },
+    { path: '/admin/tickets', icon: FiMessageCircle, label: '工单管理' },
     { path: '/admin/cards', icon: FiCreditCard, label: '卡密管理' },
     { path: '/admin/users', icon: FiUsers, label: '用户管理' },
     { path: '/admin/settings', icon: FiSettings, label: '系统设置' },
@@ -1586,6 +1587,316 @@ function OrdersManage() {
     )
 }
 
+// 工单管理
+function TicketsManage() {
+    const { showToast } = useToast()
+    const { token } = useAuthStore()
+    const [tickets, setTickets] = useState([])
+    const [loading, setLoading] = useState(true)
+    const [statusFilter, setStatusFilter] = useState('all')
+    const [selectedTicket, setSelectedTicket] = useState(null)
+    const [replyContent, setReplyContent] = useState('')
+    const [replying, setReplying] = useState(false)
+
+    const statusMap = {
+        OPEN: { label: '待处理', class: 'pending' },
+        IN_PROGRESS: { label: '处理中', class: 'processing' },
+        CLOSED: { label: '已关闭', class: 'completed' }
+    }
+
+    const typeMap = {
+        ORDER_ISSUE: '订单问题',
+        CARD_ISSUE: '卡密问题',
+        REFUND: '退款申请',
+        OTHER: '其他'
+    }
+
+    useEffect(() => {
+        fetchTickets()
+    }, [statusFilter])
+
+    const fetchTickets = async () => {
+        try {
+            const url = statusFilter === 'all'
+                ? '/api/tickets/admin/all'
+                : `/api/tickets/admin/all?status=${statusFilter}`
+
+            const res = await fetch(url, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            })
+            const data = await res.json()
+            setTickets(data.tickets || [])
+        } catch (error) {
+            showToast('获取工单失败', 'error')
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    const handleViewTicket = async (ticket) => {
+        try {
+            const res = await fetch(`/api/tickets/admin/${ticket.id}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            })
+            const data = await res.json()
+            setSelectedTicket(data.ticket)
+            setReplyContent('')
+        } catch (error) {
+            showToast('获取工单详情失败', 'error')
+        }
+    }
+
+    const handleReply = async () => {
+        if (!replyContent.trim()) {
+            showToast('请输入回复内容', 'warning')
+            return
+        }
+
+        setReplying(true)
+        try {
+            const res = await fetch(`/api/tickets/admin/${selectedTicket.id}/reply`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ content: replyContent.trim() })
+            })
+
+            if (res.ok) {
+                showToast('回复成功，已发送邮件通知用户', 'success')
+                setReplyContent('')
+                handleViewTicket(selectedTicket)
+                fetchTickets()
+            } else {
+                const data = await res.json()
+                showToast(data.error || '回复失败', 'error')
+            }
+        } catch (error) {
+            showToast('回复失败', 'error')
+        } finally {
+            setReplying(false)
+        }
+    }
+
+    const handleUpdateStatus = async (status) => {
+        try {
+            const res = await fetch(`/api/tickets/admin/${selectedTicket.id}/status`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ status })
+            })
+
+            if (res.ok) {
+                showToast('状态更新成功', 'success')
+                handleViewTicket({ id: selectedTicket.id })
+                fetchTickets()
+            }
+        } catch (error) {
+            showToast('更新状态失败', 'error')
+        }
+    }
+
+    const formatTime = (dateStr) => {
+        const date = new Date(dateStr)
+        return date.toLocaleString('zh-CN', {
+            month: 'numeric',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        })
+    }
+
+    return (
+        <div className="admin-section">
+            <div className="section-header">
+                <h2>工单管理</h2>
+                <div className="filters">
+                    <select
+                        className="filter-select"
+                        value={statusFilter}
+                        onChange={(e) => setStatusFilter(e.target.value)}
+                    >
+                        <option value="all">全部状态</option>
+                        <option value="OPEN">待处理</option>
+                        <option value="IN_PROGRESS">处理中</option>
+                        <option value="CLOSED">已关闭</option>
+                    </select>
+                </div>
+            </div>
+
+            {loading ? (
+                <div style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>加载中...</div>
+            ) : (
+                <table className="admin-table">
+                    <thead>
+                        <tr>
+                            <th>工单号</th>
+                            <th>用户</th>
+                            <th>类型</th>
+                            <th>标题</th>
+                            <th>状态</th>
+                            <th>时间</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {tickets.map(ticket => (
+                            <tr key={ticket.id}>
+                                <td className="order-no">{ticket.ticketNo}</td>
+                                <td>{ticket.user?.email || '-'}</td>
+                                <td>{typeMap[ticket.type]}</td>
+                                <td style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    {ticket.subject}
+                                </td>
+                                <td>
+                                    <span className={`status-badge ${statusMap[ticket.status]?.class}`}>
+                                        {statusMap[ticket.status]?.label}
+                                    </span>
+                                </td>
+                                <td className="time">{formatTime(ticket.createdAt)}</td>
+                                <td className="actions">
+                                    <button
+                                        className="action-btn view"
+                                        onClick={() => handleViewTicket(ticket)}
+                                    >
+                                        查看
+                                    </button>
+                                </td>
+                            </tr>
+                        ))}
+                        {tickets.length === 0 && (
+                            <tr><td colSpan="7" style={{ textAlign: 'center' }}>暂无工单</td></tr>
+                        )}
+                    </tbody>
+                </table>
+            )}
+
+            {/* 工单详情弹窗 */}
+            {selectedTicket && (
+                <div className="ship-modal-overlay" onClick={() => setSelectedTicket(null)}>
+                    <div className="ship-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '700px' }}>
+                        <div className="ship-modal-header">
+                            <div className="ship-modal-icon">
+                                <FiMessageCircle />
+                            </div>
+                            <h3>工单详情</h3>
+                            <p className="ship-modal-subtitle">{selectedTicket.ticketNo}</p>
+                            <button className="ship-modal-close" onClick={() => setSelectedTicket(null)}>
+                                <FiX />
+                            </button>
+                        </div>
+
+                        <div className="ship-modal-body" style={{ maxHeight: '500px', overflow: 'auto' }}>
+                            {/* 工单信息 */}
+                            <div className="order-info-card">
+                                <div className="order-info-row">
+                                    <span className="order-info-label">用户邮箱</span>
+                                    <span className="order-info-value">{selectedTicket.user?.email}</span>
+                                </div>
+                                <div className="order-info-row">
+                                    <span className="order-info-label">问题类型</span>
+                                    <span className="order-info-value">{typeMap[selectedTicket.type]}</span>
+                                </div>
+                                <div className="order-info-row">
+                                    <span className="order-info-label">工单标题</span>
+                                    <span className="order-info-value">{selectedTicket.subject}</span>
+                                </div>
+                                {selectedTicket.orderNo && (
+                                    <div className="order-info-row">
+                                        <span className="order-info-label">关联订单</span>
+                                        <span className="order-info-value">{selectedTicket.orderNo}</span>
+                                    </div>
+                                )}
+                                <div className="order-info-row">
+                                    <span className="order-info-label">当前状态</span>
+                                    <span className="order-info-value">
+                                        <select
+                                            value={selectedTicket.status}
+                                            onChange={(e) => handleUpdateStatus(e.target.value)}
+                                            style={{ padding: '4px 8px', borderRadius: '4px', border: '1px solid #e2e8f0' }}
+                                        >
+                                            <option value="OPEN">待处理</option>
+                                            <option value="IN_PROGRESS">处理中</option>
+                                            <option value="CLOSED">已关闭</option>
+                                        </select>
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* 消息列表 */}
+                            <div style={{ marginTop: '20px' }}>
+                                <h4 style={{ marginBottom: '12px', color: '#1e293b' }}>对话记录</h4>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                    {selectedTicket.messages?.map(msg => (
+                                        <div
+                                            key={msg.id}
+                                            style={{
+                                                padding: '12px 16px',
+                                                borderRadius: '8px',
+                                                background: msg.isAdmin ? 'linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(217, 70, 239, 0.1) 100%)' : '#f1f5f9',
+                                                borderLeft: msg.isAdmin ? '3px solid #8b5cf6' : '3px solid #94a3b8'
+                                            }}
+                                        >
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                                                <span style={{ fontWeight: 600, color: msg.isAdmin ? '#8b5cf6' : '#475569' }}>
+                                                    {msg.isAdmin ? '客服' : '用户'}
+                                                </span>
+                                                <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
+                                                    {formatTime(msg.createdAt)}
+                                                </span>
+                                            </div>
+                                            <p style={{ margin: 0, color: '#334155', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
+                                                {msg.content}
+                                            </p>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* 回复框 */}
+                            {selectedTicket.status !== 'CLOSED' && (
+                                <div style={{ marginTop: '20px' }}>
+                                    <h4 style={{ marginBottom: '12px', color: '#1e293b' }}>回复工单</h4>
+                                    <textarea
+                                        value={replyContent}
+                                        onChange={(e) => setReplyContent(e.target.value)}
+                                        placeholder="输入回复内容..."
+                                        style={{
+                                            width: '100%',
+                                            padding: '12px',
+                                            borderRadius: '8px',
+                                            border: '1px solid #e2e8f0',
+                                            minHeight: '100px',
+                                            resize: 'vertical',
+                                            fontSize: '0.95rem'
+                                        }}
+                                    />
+                                    <div style={{ marginTop: '12px', display: 'flex', gap: '12px' }}>
+                                        <button
+                                            className="btn btn-primary"
+                                            onClick={handleReply}
+                                            disabled={replying}
+                                        >
+                                            {replying ? '发送中...' : '发送回复'}
+                                        </button>
+                                        <span style={{ fontSize: '0.85rem', color: '#94a3b8', alignSelf: 'center' }}>
+                                            回复后将发送邮件通知用户
+                                        </span>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    )
+}
+
 // 卡密管理
 function CardsManage() {
     const { showToast } = useToast()
@@ -2721,6 +3032,7 @@ function AdminDashboard() {
                     <Route index element={<DashboardHome />} />
                     <Route path="products" element={<ProductsManage />} />
                     <Route path="orders" element={<OrdersManage />} />
+                    <Route path="tickets" element={<TicketsManage />} />
                     <Route path="cards" element={<CardsManage />} />
                     <Route path="users" element={<UsersManage />} />
                     <Route path="settings" element={<SettingsPage />} />

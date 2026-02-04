@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom'
-import { FiUser, FiPackage, FiLock, FiLogOut, FiMail, FiCalendar, FiCopy, FiEye, FiEyeOff } from 'react-icons/fi'
+import { FiUser, FiPackage, FiLock, FiLogOut, FiMail, FiCalendar, FiCopy, FiEye, FiEyeOff, FiMessageCircle } from 'react-icons/fi'
 import { useAuthStore } from '../../store/authStore'
 import toast from 'react-hot-toast'
 import './User.css'
@@ -9,6 +9,7 @@ import './User.css'
 const menuItems = [
     { path: '/user', icon: FiUser, label: '个人信息', exact: true },
     { path: '/user/orders', icon: FiPackage, label: '我的订单' },
+    { path: '/tickets', icon: FiMessageCircle, label: '我的工单' },
     { path: '/user/password', icon: FiLock, label: '修改密码' }
 ]
 

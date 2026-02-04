@@ -334,11 +334,105 @@ const sendPasswordResetEmail = async (user, resetToken, baseUrl) => {
     }
 }
 
+// 发送工单回复通知邮件
+const sendTicketReplyNotification = async (email, username, ticketNo, subject, replyContent) => {
+    try {
+        const config = await getEmailConfig()
+
+        if (!config.emailNotify) {
+            console.log('邮件通知已禁用')
+            return { success: false, reason: 'disabled' }
+        }
+
+        const transporter = await createTransporter()
+        if (!transporter) {
+            console.log('邮件配置不完整')
+            return { success: false, reason: 'config_missing' }
+        }
+
+        const mailOptions = {
+            from: `"${config.senderName || 'HaoDongXi'}" <${config.smtpUser}>`,
+            to: email,
+            subject: `【工单回复】您的工单 ${ticketNo} 有新回复 - HaoDongXi`,
+            html: `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="utf-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                </head>
+                <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif; background: #f1f5f9; margin: 0; padding: 30px 15px;">
+                    <div style="max-width: 580px; margin: 0 auto; background: white; border-radius: 20px; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.08);">
+                        
+                        <!-- Header -->
+                        <div style="background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 50%, #d946ef 100%); padding: 40px 30px; text-align: center;">
+                            <div style="font-size: 48px; margin-bottom: 12px;">💬</div>
+                            <h1 style="color: white; margin: 0; font-size: 26px; font-weight: 600; letter-spacing: 1px;">工单回复通知</h1>
+                            <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0; font-size: 14px;">您的工单有新的回复</p>
+                        </div>
+                        
+                        <!-- Content -->
+                        <div style="padding: 35px 30px;">
+                            <p style="color: #334155; font-size: 16px; margin: 0 0 20px; line-height: 1.6;">您好，${username}！</p>
+                            <p style="color: #475569; font-size: 15px; margin: 0 0 25px; line-height: 1.6;">您的工单有了新的回复，以下是详细信息：</p>
+                            
+                            <!-- Ticket Info Card -->
+                            <div style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); padding: 24px; border-radius: 14px; margin-bottom: 28px; border: 1px solid #e2e8f0;">
+                                <table style="width: 100%; border-collapse: collapse;">
+                                    <tr>
+                                        <td style="padding: 10px 0; color: #64748b; font-size: 14px; border-bottom: 1px solid #e2e8f0;">工单号</td>
+                                        <td style="padding: 10px 0; color: #1e293b; font-size: 14px; text-align: right; font-weight: 600; border-bottom: 1px solid #e2e8f0;">${ticketNo}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 10px 0; color: #64748b; font-size: 14px;">主题</td>
+                                        <td style="padding: 10px 0; color: #1e293b; font-size: 14px; text-align: right; font-weight: 500;">${subject}</td>
+                                    </tr>
+                                </table>
+                            </div>
+                            
+                            <!-- Reply Content -->
+                            <div style="margin-top: 28px;">
+                                <h3 style="color: #1e293b; font-size: 17px; margin: 0 0 16px; display: flex; align-items: center;">
+                                    <span style="display: inline-block; width: 4px; height: 20px; background: linear-gradient(180deg, #8b5cf6, #d946ef); border-radius: 2px; margin-right: 10px;"></span>
+                                    客服回复
+                                </h3>
+                                <div style="background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%); padding: 18px 20px; border-radius: 12px; border-left: 4px solid #a855f7;">
+                                    <p style="color: #475569; font-size: 14px; margin: 0; line-height: 1.8; white-space: pre-wrap;">${replyContent}</p>
+                                </div>
+                            </div>
+                            
+                            <!-- Action Button -->
+                            <div style="text-align: center; margin: 32px 0;">
+                                <a href="${process.env.FRONTEND_URL || 'https://haodongxi.shop'}/tickets" style="display: inline-block; background: linear-gradient(135deg, #8b5cf6 0%, #d946ef 100%); color: white; padding: 14px 40px; text-decoration: none; border-radius: 12px; font-weight: 600; font-size: 15px; box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);">查看工单详情</a>
+                            </div>
+                        </div>
+                        
+                        <!-- Footer -->
+                        <div style="text-align: center; padding: 25px 30px; background: #f8fafc; border-top: 1px solid #e2e8f0;">
+                            <p style="color: #94a3b8; font-size: 12px; margin: 0 0 8px;">此邮件由系统自动发送，请勿直接回复</p>
+                            <p style="color: #64748b; font-size: 13px; margin: 0; font-weight: 500;">© ${new Date().getFullYear()} HaoDongXi · 好东西购物平台</p>
+                        </div>
+                    </div>
+                </body>
+                </html>
+            `
+        }
+
+        const result = await transporter.sendMail(mailOptions)
+        console.log('工单回复通知邮件发送成功:', result.messageId)
+        return { success: true, messageId: result.messageId }
+    } catch (error) {
+        console.error('工单回复通知邮件发送失败:', error)
+        return { success: false, error: error.message }
+    }
+}
+
 module.exports = {
     getEmailConfig,
     sendOrderCompletedEmail,
     sendVerificationEmail,
     sendPasswordResetEmail,
+    sendTicketReplyNotification,
     testEmailConnection
 }
 

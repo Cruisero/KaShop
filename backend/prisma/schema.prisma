@@ -21,6 +21,8 @@ model User {
   resetToken        String?   @map("reset_token")
   resetTokenExpiry  DateTime? @map("reset_token_expiry")
   orders            Order[]
+  tickets           Ticket[]
+  ticketMessages    TicketMessage[]
 
   @@map("users")
 }
@@ -131,6 +133,7 @@ model Order {
   product       Product     @relation(fields: [productId], references: [id])
   user          User?       @relation(fields: [userId], references: [id])
   payment       Payment?
+  tickets       Ticket[]
 
   @@index([productId], map: "orders_product_id_fkey")
   @@index([userId], map: "orders_user_id_fkey")
@@ -192,4 +195,56 @@ enum PaymentStatus {
   SUCCESS
   FAILED
   REFUNDED
+}
+
+// 工单系统
+enum TicketType {
+  ORDER_ISSUE   // 订单问题
+  CARD_ISSUE    // 卡密问题
+  REFUND        // 退款申请
+  OTHER         // 其他
+}
+
+enum TicketStatus {
+  OPEN          // 待处理
+  IN_PROGRESS   // 处理中
+  CLOSED        // 已关闭
+}
+
+model Ticket {
+  id        String       @id @default(uuid())
+  ticketNo  String       @unique @map("ticket_no")
+  userId    String       @map("user_id")
+  orderId   String?      @map("order_id")
+  orderNo   String?      @map("order_no")
+  type      TicketType
+  subject   String
+  status    TicketStatus @default(OPEN)
+  createdAt DateTime     @default(now()) @map("created_at")
+  updatedAt DateTime     @updatedAt @map("updated_at")
+  closedAt  DateTime?    @map("closed_at")
+
+  user      User         @relation(fields: [userId], references: [id])
+  order     Order?       @relation(fields: [orderId], references: [id])
+  messages  TicketMessage[]
+
+  @@index([userId], map: "tickets_user_id_fkey")
+  @@index([orderId], map: "tickets_order_id_fkey")
+  @@map("tickets")
+}
+
+model TicketMessage {
+  id        String   @id @default(uuid())
+  ticketId  String   @map("ticket_id")
+  senderId  String?  @map("sender_id")
+  isAdmin   Boolean  @default(false) @map("is_admin")
+  content   String   @db.Text
+  images    Json?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  sender    User?    @relation(fields: [senderId], references: [id])
+
+  @@index([ticketId], map: "ticket_messages_ticket_id_fkey")
+  @@map("ticket_messages")
 }

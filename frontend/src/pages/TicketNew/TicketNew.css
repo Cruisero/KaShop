@@ -1,0 +1,170 @@
+/* 提交工单页面样式 */
+.ticket-new-page {
+    padding: 20px 0;
+}
+
+.ticket-new-page .back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    margin-bottom: 24px;
+    background: transparent;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.ticket-new-page .back-btn:hover {
+    color: var(--text-primary);
+    border-color: var(--primary);
+}
+
+.ticket-new-container {
+    max-width: 700px;
+    margin: 0 auto;
+}
+
+.ticket-new-header {
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+.ticket-new-header h1 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0 0 12px;
+}
+
+.ticket-new-header p {
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+/* 表单 */
+.ticket-form {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 32px;
+}
+
+.ticket-form .form-group {
+    margin-bottom: 24px;
+}
+
+.ticket-form label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    margin-bottom: 12px;
+}
+
+/* 类型选择 */
+.type-options {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+}
+
+.type-option {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    padding: 16px;
+    background: var(--bg-secondary);
+    border: 2px solid var(--border-color);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.type-option input {
+    position: absolute;
+    opacity: 0;
+}
+
+.type-option:hover {
+    border-color: var(--primary);
+}
+
+.type-option.active {
+    border-color: var(--primary);
+    background: rgba(239, 68, 68, 0.05);
+}
+
+.type-label {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+}
+
+.type-desc {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.type-option.active .type-label {
+    color: var(--primary);
+}
+
+/* 输入框 */
+.ticket-form .input {
+    width: 100%;
+    padding: 14px 16px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    font-size: 0.95rem;
+    transition: all var(--transition-fast);
+}
+
+.ticket-form .input:focus {
+    outline: none;
+    border-color: var(--primary);
+    background: var(--bg-card);
+}
+
+.ticket-form .textarea {
+    min-height: 150px;
+    resize: vertical;
+    line-height: 1.6;
+}
+
+.char-count {
+    text-align: right;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-top: 8px;
+}
+
+/* 提交按钮 */
+.form-actions {
+    margin-top: 32px;
+    text-align: center;
+}
+
+.form-actions .btn-lg {
+    padding: 16px 48px;
+    font-size: 1rem;
+}
+
+/* 响应式 */
+@media (max-width: 600px) {
+    .type-options {
+        grid-template-columns: 1fr;
+    }
+
+    .ticket-form {
+        padding: 20px;
+    }
+}
