@@ -1599,16 +1599,24 @@ function TicketsManage() {
     const [replying, setReplying] = useState(false)
 
     const statusMap = {
-        OPEN: { label: '待处理', class: 'pending' },
-        IN_PROGRESS: { label: '处理中', class: 'processing' },
-        CLOSED: { label: '已关闭', class: 'completed' }
+        OPEN: { label: '待处理', class: 'pending', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.1)' },
+        IN_PROGRESS: { label: '处理中', class: 'processing', color: '#3b82f6', bg: 'rgba(59, 130, 246, 0.1)' },
+        CLOSED: { label: '已关闭', class: 'completed', color: '#10b981', bg: 'rgba(16, 185, 129, 0.1)' }
     }
 
     const typeMap = {
-        ORDER_ISSUE: '订单问题',
-        CARD_ISSUE: '卡密问题',
-        REFUND: '退款申请',
-        OTHER: '其他'
+        ORDER_ISSUE: { label: '订单问题', color: '#ef4444', bg: 'rgba(239, 68, 68, 0.1)' },
+        CARD_ISSUE: { label: '卡密问题', color: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.1)' },
+        REFUND: { label: '退款申请', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.1)' },
+        OTHER: { label: '其他', color: '#64748b', bg: 'rgba(100, 116, 139, 0.1)' }
+    }
+
+    // 统计数据
+    const stats = {
+        total: tickets.length,
+        open: tickets.filter(t => t.status === 'OPEN').length,
+        inProgress: tickets.filter(t => t.status === 'IN_PROGRESS').length,
+        closed: tickets.filter(t => t.status === 'CLOSED').length
     }
 
     useEffect(() => {
@@ -1712,9 +1720,42 @@ function TicketsManage() {
 
     return (
         <div className="admin-section">
+            {/* 统计卡片 */}
+            <div className="ticket-stats">
+                <div className="ticket-stat-card" onClick={() => setStatusFilter('all')}>
+                    <div className="stat-icon total"><FiMessageCircle /></div>
+                    <div className="stat-info">
+                        <span className="stat-value">{stats.total}</span>
+                        <span className="stat-label">全部工单</span>
+                    </div>
+                </div>
+                <div className="ticket-stat-card" onClick={() => setStatusFilter('OPEN')}>
+                    <div className="stat-icon pending"><FiAlertCircle /></div>
+                    <div className="stat-info">
+                        <span className="stat-value">{stats.open}</span>
+                        <span className="stat-label">待处理</span>
+                    </div>
+                </div>
+                <div className="ticket-stat-card" onClick={() => setStatusFilter('IN_PROGRESS')}>
+                    <div className="stat-icon processing"><FiActivity /></div>
+                    <div className="stat-info">
+                        <span className="stat-value">{stats.inProgress}</span>
+                        <span className="stat-label">处理中</span>
+                    </div>
+                </div>
+                <div className="ticket-stat-card" onClick={() => setStatusFilter('CLOSED')}>
+                    <div className="stat-icon completed"><FiCheckCircle /></div>
+                    <div className="stat-info">
+                        <span className="stat-value">{stats.closed}</span>
+                        <span className="stat-label">已关闭</span>
+                    </div>
+                </div>
+            </div>
+
             <div className="section-header">
-                <h2>工单管理</h2>
-                <div className="filters">
+                <h2>工单列表</h2>
+                <div className="header-info">
+                    <span className="total-count">共 {tickets.length} 条工单</span>
                     <select
                         className="filter-select"
                         value={statusFilter}
@@ -1729,56 +1770,61 @@ function TicketsManage() {
             </div>
 
             {loading ? (
-                <div style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>加载中...</div>
+                <div className="loading-state">
+                    <div className="loading-spinner"></div>
+                    <span>加载中...</span>
+                </div>
+            ) : tickets.length === 0 ? (
+                <div className="empty-state">
+                    <FiMessageCircle className="empty-icon" />
+                    <h3>暂无工单</h3>
+                    <p>当前没有{statusFilter !== 'all' ? statusMap[statusFilter]?.label : ''}工单</p>
+                </div>
             ) : (
-                <table className="admin-table">
-                    <thead>
-                        <tr>
-                            <th>工单号</th>
-                            <th>用户</th>
-                            <th>类型</th>
-                            <th>标题</th>
-                            <th>状态</th>
-                            <th>时间</th>
-                            <th>操作</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {tickets.map(ticket => (
-                            <tr key={ticket.id}>
-                                <td className="order-no">{ticket.ticketNo}</td>
-                                <td>{ticket.user?.email || '-'}</td>
-                                <td>{typeMap[ticket.type]}</td>
-                                <td style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                    {ticket.subject}
-                                </td>
-                                <td>
-                                    <span className={`status-badge ${statusMap[ticket.status]?.class}`}>
-                                        {statusMap[ticket.status]?.label}
-                                    </span>
-                                </td>
-                                <td className="time">{formatTime(ticket.createdAt)}</td>
-                                <td className="actions">
-                                    <button
-                                        className="action-btn view"
-                                        onClick={() => handleViewTicket(ticket)}
-                                    >
-                                        查看
-                                    </button>
-                                </td>
-                            </tr>
-                        ))}
-                        {tickets.length === 0 && (
-                            <tr><td colSpan="7" style={{ textAlign: 'center' }}>暂无工单</td></tr>
-                        )}
-                    </tbody>
-                </table>
+                <div className="ticket-list">
+                    {tickets.map(ticket => (
+                        <div key={ticket.id} className="ticket-card" onClick={() => handleViewTicket(ticket)}>
+                            <div className="ticket-header">
+                                <span className="ticket-no">{ticket.ticketNo}</span>
+                                <span
+                                    className="ticket-type"
+                                    style={{
+                                        color: typeMap[ticket.type]?.color,
+                                        background: typeMap[ticket.type]?.bg
+                                    }}
+                                >
+                                    {typeMap[ticket.type]?.label}
+                                </span>
+                            </div>
+                            <div className="ticket-subject">{ticket.subject}</div>
+                            <div className="ticket-meta">
+                                <span className="ticket-user">
+                                    <FiUsers style={{ marginRight: '4px' }} />
+                                    {ticket.user?.email || '-'}
+                                </span>
+                                <span className="ticket-time">{formatTime(ticket.createdAt)}</span>
+                            </div>
+                            <div className="ticket-footer">
+                                <span
+                                    className="ticket-status"
+                                    style={{
+                                        color: statusMap[ticket.status]?.color,
+                                        background: statusMap[ticket.status]?.bg
+                                    }}
+                                >
+                                    {statusMap[ticket.status]?.label}
+                                </span>
+                                <button className="action-btn view">查看详情</button>
+                            </div>
+                        </div>
+                    ))}
+                </div>
             )}
 
             {/* 工单详情弹窗 */}
             {selectedTicket && (
                 <div className="ship-modal-overlay" onClick={() => setSelectedTicket(null)}>
-                    <div className="ship-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '700px' }}>
+                    <div className="ship-modal ticket-detail-modal" onClick={e => e.stopPropagation()}>
                         <div className="ship-modal-header">
                             <div className="ship-modal-icon">
                                 <FiMessageCircle />
@@ -1792,66 +1838,69 @@ function TicketsManage() {
 
                         <div className="ship-modal-body" style={{ maxHeight: '500px', overflow: 'auto' }}>
                             {/* 工单信息 */}
-                            <div className="order-info-card">
-                                <div className="order-info-row">
-                                    <span className="order-info-label">用户邮箱</span>
-                                    <span className="order-info-value">{selectedTicket.user?.email}</span>
+                            <div className="ticket-info-grid">
+                                <div className="info-item">
+                                    <label>用户邮箱</label>
+                                    <span>{selectedTicket.user?.email}</span>
                                 </div>
-                                <div className="order-info-row">
-                                    <span className="order-info-label">问题类型</span>
-                                    <span className="order-info-value">{typeMap[selectedTicket.type]}</span>
+                                <div className="info-item">
+                                    <label>问题类型</label>
+                                    <span
+                                        className="type-tag"
+                                        style={{
+                                            color: typeMap[selectedTicket.type]?.color,
+                                            background: typeMap[selectedTicket.type]?.bg
+                                        }}
+                                    >
+                                        {typeMap[selectedTicket.type]?.label}
+                                    </span>
                                 </div>
-                                <div className="order-info-row">
-                                    <span className="order-info-label">工单标题</span>
-                                    <span className="order-info-value">{selectedTicket.subject}</span>
+                                <div className="info-item full-width">
+                                    <label>工单标题</label>
+                                    <span>{selectedTicket.subject}</span>
                                 </div>
                                 {selectedTicket.orderNo && (
-                                    <div className="order-info-row">
-                                        <span className="order-info-label">关联订单</span>
-                                        <span className="order-info-value">{selectedTicket.orderNo}</span>
+                                    <div className="info-item">
+                                        <label>关联订单</label>
+                                        <span className="order-link">{selectedTicket.orderNo}</span>
                                     </div>
                                 )}
-                                <div className="order-info-row">
-                                    <span className="order-info-label">当前状态</span>
-                                    <span className="order-info-value">
-                                        <select
-                                            value={selectedTicket.status}
-                                            onChange={(e) => handleUpdateStatus(e.target.value)}
-                                            style={{ padding: '4px 8px', borderRadius: '4px', border: '1px solid #e2e8f0' }}
-                                        >
-                                            <option value="OPEN">待处理</option>
-                                            <option value="IN_PROGRESS">处理中</option>
-                                            <option value="CLOSED">已关闭</option>
-                                        </select>
-                                    </span>
+                                <div className="info-item">
+                                    <label>当前状态</label>
+                                    <select
+                                        value={selectedTicket.status}
+                                        onChange={(e) => handleUpdateStatus(e.target.value)}
+                                        className="status-select"
+                                        style={{
+                                            color: statusMap[selectedTicket.status]?.color,
+                                            borderColor: statusMap[selectedTicket.status]?.color
+                                        }}
+                                    >
+                                        <option value="OPEN">待处理</option>
+                                        <option value="IN_PROGRESS">处理中</option>
+                                        <option value="CLOSED">已关闭</option>
+                                    </select>
                                 </div>
                             </div>
 
                             {/* 消息列表 */}
-                            <div style={{ marginTop: '20px' }}>
-                                <h4 style={{ marginBottom: '12px', color: '#1e293b' }}>对话记录</h4>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                            <div className="ticket-messages">
+                                <h4>对话记录</h4>
+                                <div className="messages-container">
                                     {selectedTicket.messages?.map(msg => (
                                         <div
                                             key={msg.id}
-                                            style={{
-                                                padding: '12px 16px',
-                                                borderRadius: '8px',
-                                                background: msg.isAdmin ? 'linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(217, 70, 239, 0.1) 100%)' : '#f1f5f9',
-                                                borderLeft: msg.isAdmin ? '3px solid #8b5cf6' : '3px solid #94a3b8'
-                                            }}
+                                            className={`message-item ${msg.isAdmin ? 'admin' : 'user'}`}
                                         >
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                                                <span style={{ fontWeight: 600, color: msg.isAdmin ? '#8b5cf6' : '#475569' }}>
+                                            <div className="message-header">
+                                                <span className="message-sender">
                                                     {msg.isAdmin ? '客服' : '用户'}
                                                 </span>
-                                                <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
+                                                <span className="message-time">
                                                     {formatTime(msg.createdAt)}
                                                 </span>
                                             </div>
-                                            <p style={{ margin: 0, color: '#334155', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
-                                                {msg.content}
-                                            </p>
+                                            <p className="message-content">{msg.content}</p>
                                         </div>
                                     ))}
                                 </div>
@@ -1859,23 +1908,15 @@ function TicketsManage() {
 
                             {/* 回复框 */}
                             {selectedTicket.status !== 'CLOSED' && (
-                                <div style={{ marginTop: '20px' }}>
-                                    <h4 style={{ marginBottom: '12px', color: '#1e293b' }}>回复工单</h4>
+                                <div className="ticket-reply">
+                                    <h4>回复工单</h4>
                                     <textarea
                                         value={replyContent}
                                         onChange={(e) => setReplyContent(e.target.value)}
                                         placeholder="输入回复内容..."
-                                        style={{
-                                            width: '100%',
-                                            padding: '12px',
-                                            borderRadius: '8px',
-                                            border: '1px solid #e2e8f0',
-                                            minHeight: '100px',
-                                            resize: 'vertical',
-                                            fontSize: '0.95rem'
-                                        }}
+                                        className="reply-textarea"
                                     />
-                                    <div style={{ marginTop: '12px', display: 'flex', gap: '12px' }}>
+                                    <div className="reply-actions">
                                         <button
                                             className="btn btn-primary"
                                             onClick={handleReply}
@@ -1883,7 +1924,7 @@ function TicketsManage() {
                                         >
                                             {replying ? '发送中...' : '发送回复'}
                                         </button>
-                                        <span style={{ fontSize: '0.85rem', color: '#94a3b8', alignSelf: 'center' }}>
+                                        <span className="reply-hint">
                                             回复后将发送邮件通知用户
                                         </span>
                                     </div>
