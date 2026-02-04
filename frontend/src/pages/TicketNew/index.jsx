@@ -135,18 +135,47 @@ function TicketNew() {
                                 <FiPackage />
                                 关联订单（可选）
                             </label>
-                            <select
-                                className="input"
-                                value={orderId}
-                                onChange={(e) => setOrderId(e.target.value)}
-                            >
-                                <option value="">不关联订单</option>
-                                {orders.map(order => (
-                                    <option key={order.id} value={order.id}>
-                                        {order.orderNo} - {order.productName} (¥{parseFloat(order.totalAmount).toFixed(2)})
-                                    </option>
+                            <div className="order-options">
+                                <label
+                                    className={`order-option ${orderId === '' ? 'active' : ''}`}
+                                >
+                                    <input
+                                        type="radio"
+                                        name="orderId"
+                                        value=""
+                                        checked={orderId === ''}
+                                        onChange={() => setOrderId('')}
+                                    />
+                                    <div className="order-option-content">
+                                        <span className="order-option-label">不关联订单</span>
+                                        <span className="order-option-desc">直接提交问题咨询</span>
+                                    </div>
+                                </label>
+                                {orders.slice(0, 5).map(order => (
+                                    <label
+                                        key={order.id}
+                                        className={`order-option ${orderId === order.id ? 'active' : ''}`}
+                                    >
+                                        <input
+                                            type="radio"
+                                            name="orderId"
+                                            value={order.id}
+                                            checked={orderId === order.id}
+                                            onChange={() => setOrderId(order.id)}
+                                        />
+                                        <div className="order-option-content">
+                                            <span className="order-option-label">{order.productName}</span>
+                                            <div className="order-option-meta">
+                                                <span className="order-no">{order.orderNo}</span>
+                                                <span className="order-amount">¥{parseFloat(order.totalAmount).toFixed(2)}</span>
+                                            </div>
+                                        </div>
+                                    </label>
                                 ))}
-                            </select>
+                            </div>
+                            {orders.length > 5 && (
+                                <p className="order-hint">仅显示最近5条订单</p>
+                            )}
                         </div>
                     )}
 

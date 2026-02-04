@@ -167,4 +167,93 @@
     .ticket-form {
         padding: 20px;
     }
+
+    .order-options {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* 订单选择 */
+.order-options {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+}
+
+.order-option {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    padding: 14px 16px;
+    background: var(--bg-secondary);
+    border: 2px solid var(--border-color);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.order-option input {
+    position: absolute;
+    opacity: 0;
+}
+
+.order-option:hover {
+    border-color: var(--primary);
+}
+
+.order-option.active {
+    border-color: var(--primary);
+    background: rgba(239, 68, 68, 0.05);
+}
+
+.order-option-content {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    width: 100%;
+}
+
+.order-option-label {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.order-option.active .order-option-label {
+    color: var(--primary);
+}
+
+.order-option-desc {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.order-option-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+}
+
+.order-option-meta .order-no {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-family: monospace;
+}
+
+.order-option-meta .order-amount {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--primary);
+}
+
+.order-hint {
+    margin: 8px 0 0;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    text-align: center;
 }
