@@ -283,6 +283,12 @@ function Navbar() {
                         >
                             关于
                         </Link>
+                        <Link
+                            to="/tickets/new"
+                            className={`nav-link ${location.pathname === '/tickets/new' ? 'active' : ''}`}
+                        >
+                            工单
+                        </Link>
                     </div>
 
                     {/* 移动端搜索图标 */}
