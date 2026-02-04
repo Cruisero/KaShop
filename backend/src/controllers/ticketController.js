@@ -115,6 +115,9 @@ exports.getTicketDetail = async (req, res, next) => {
         const ticket = await prisma.ticket.findUnique({
             where: { id },
             include: {
+                user: {
+                    select: { id: true, email: true, username: true }
+                },
                 messages: {
                     orderBy: { createdAt: 'asc' },
                     include: {
