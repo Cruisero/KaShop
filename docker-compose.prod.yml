@@ -29,7 +29,7 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=8080
-      - DATABASE_URL=mysql://haodongxi:kashop123@mysql:3306/haodongxi
+      - DATABASE_URL=mysql://haodongxi:${MYSQL_PASSWORD:-HaoDongXi2026!}@mysql:3306/haodongxi
       - JWT_SECRET=${JWT_SECRET:-your-production-jwt-secret-change-this}
       - JWT_EXPIRES_IN=7d
       - FRONTEND_URL=https://haodongxi.shop
