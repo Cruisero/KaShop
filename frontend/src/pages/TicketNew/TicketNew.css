@@ -265,7 +265,7 @@
 .dropdown-divider {
     height: 1px;
     background: var(--border-color);
-    margin: 4px 0;
+    /* margin: 4px 0; */
 }
 
 .item-text {
