@@ -436,7 +436,7 @@
     display: inline-flex;
     flex-direction: column;
     gap: 16px;
-    padding: 20px;
+    /* padding: 20px; */
     background: transparent;
     margin-bottom: 24px;
     width: fit-content;

@@ -2350,6 +2350,28 @@
     font-size: 1rem;
 }
 
+/* 备注样式 */
+.order-info-value.remark-value {
+    color: #64748b;
+    font-weight: 400;
+    font-style: italic;
+    word-break: break-word;
+}
+
+.remark-cell {
+    max-width: 150px;
+}
+
+.remark-text {
+    color: #64748b;
+    font-size: 0.85rem;
+    cursor: help;
+}
+
+.no-remark {
+    color: #cbd5e1;
+}
+
 .card-input-section {
     margin-bottom: 16px;
 }

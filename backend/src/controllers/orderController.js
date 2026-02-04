@@ -12,7 +12,7 @@ const generateOrderNo = () => {
 // 创建订单
 exports.createOrder = async (req, res, next) => {
     try {
-        const { productId, variantId, quantity = 1, email, paymentMethod } = req.body
+        const { productId, variantId, quantity = 1, email, paymentMethod, remark } = req.body
         const userId = req.user?.id || null
 
         // 查询商品
@@ -89,7 +89,8 @@ exports.createOrder = async (req, res, next) => {
                 status: 'PENDING',
                 paymentMethod,
                 ipAddress: req.ip,
-                userAgent: req.get('User-Agent')
+                userAgent: req.get('User-Agent'),
+                remark: remark || null
             }
         })
 

@@ -19,6 +19,9 @@ const createOrderSchema = Joi.object({
     paymentMethod: Joi.string().valid('alipay', 'wechat', 'usdt').required().messages({
         'any.only': '不支持的支付方式',
         'any.required': '请选择支付方式'
+    }),
+    remark: Joi.string().max(500).optional().allow('', null).messages({
+        'string.max': '备注最多500个字符'
     })
 })
 

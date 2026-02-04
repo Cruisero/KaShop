@@ -1438,6 +1438,7 @@ function OrdersManage() {
                         <th>商品</th>
                         <th>金额</th>
                         <th>邮箱</th>
+                        <th>备注</th>
                         <th>状态</th>
                         <th>时间</th>
                         <th>操作</th>
@@ -1450,6 +1451,15 @@ function OrdersManage() {
                             <td>{order.productName}</td>
                             <td>¥{parseFloat(order.totalAmount).toFixed(2)}</td>
                             <td>{order.email}</td>
+                            <td className="remark-cell">
+                                {order.remark ? (
+                                    <span className="remark-text" title={order.remark}>
+                                        {order.remark.length > 20 ? order.remark.slice(0, 20) + '...' : order.remark}
+                                    </span>
+                                ) : (
+                                    <span className="no-remark">-</span>
+                                )}
+                            </td>
                             <td>
                                 <span className={`status-badge ${statusMap[order.status?.toUpperCase()]?.class || order.status?.toLowerCase()}`}>
                                     {statusMap[order.status?.toUpperCase()]?.label || order.status}
@@ -1471,7 +1481,7 @@ function OrdersManage() {
                         </tr>
                     ))}
                     {orders.length === 0 && (
-                        <tr><td colSpan="7" style={{ textAlign: 'center' }}>暂无订单</td></tr>
+                        <tr><td colSpan="8" style={{ textAlign: 'center' }}>暂无订单</td></tr>
                     )}
                 </tbody>
             </table>
@@ -1509,6 +1519,12 @@ function OrdersManage() {
                                     <span className="order-info-label">客户邮箱</span>
                                     <span className="order-info-value">{cardInputOrder.email}</span>
                                 </div>
+                                {cardInputOrder.remark && (
+                                    <div className="order-info-row">
+                                        <span className="order-info-label">订单备注</span>
+                                        <span className="order-info-value remark-value">{cardInputOrder.remark}</span>
+                                    </div>
+                                )}
                             </div>
 
                             <div className="card-input-section">

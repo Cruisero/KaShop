@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { FiCreditCard, FiMail, FiArrowLeft, FiCheck } from 'react-icons/fi'
+import { FiCreditCard, FiMail, FiArrowLeft, FiCheck, FiEdit3 } from 'react-icons/fi'
 import { useCartStore } from '../../store/cartStore'
 import { useAuthStore } from '../../store/authStore'
 import toast from 'react-hot-toast'
@@ -29,6 +29,7 @@ function Checkout() {
     const [loading, setLoading] = useState(false)
     const [agreed, setAgreed] = useState(false)
     const [paymentMethods, setPaymentMethods] = useState([])
+    const [remark, setRemark] = useState('')
 
     const totalPrice = getTotalPrice()
     const itemCount = items.reduce((sum, item) => sum + item.quantity, 0)
@@ -109,7 +110,8 @@ function Checkout() {
                         variantId: item.variant?.id || null,
                         quantity: item.quantity,
                         email: email,
-                        paymentMethod: paymentMethod
+                        paymentMethod: paymentMethod,
+                        remark: remark.trim() || null
                     })
                 }).then(res => res.json())
             )
@@ -210,6 +212,24 @@ function Checkout() {
                                 </label>
                             ))}
                         </div>
+                    </div>
+
+                    {/* 订单备注 */}
+                    <div className="checkout-section">
+                        <h3>
+                            <FiEdit3 />
+                            订单备注
+                        </h3>
+                        <p className="section-desc">如有特殊要求，请在此备注（选填）</p>
+                        <textarea
+                            className="input remark-input"
+                            placeholder="例如：请发送到备用邮箱 xxx@example.com"
+                            value={remark}
+                            onChange={(e) => setRemark(e.target.value)}
+                            maxLength={500}
+                            rows={3}
+                        />
+                        <div className="remark-count">{remark.length}/500</div>
                     </div>
                 </div>
 
