@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { FiArrowLeft, FiSend, FiPackage } from 'react-icons/fi'
+import { FiArrowLeft, FiSend, FiPackage, FiChevronDown, FiCheck } from 'react-icons/fi'
 import { useAuthStore } from '../../store/authStore'
 import toast from 'react-hot-toast'
 import './TicketNew.css'
@@ -22,6 +22,8 @@ function TicketNew() {
     const [orderId, setOrderId] = useState('')
     const [orders, setOrders] = useState([])
     const [loading, setLoading] = useState(false)
+    const [dropdownOpen, setDropdownOpen] = useState(false)
+    const dropdownRef = useRef(null)
 
     useEffect(() => {
         if (!isAuthenticated) {
@@ -30,6 +32,17 @@ function TicketNew() {
         }
         fetchOrders()
     }, [isAuthenticated])
+
+    // 点击外部关闭下拉
+    useEffect(() => {
+        const handleClickOutside = (e) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+                setDropdownOpen(false)
+            }
+        }
+        document.addEventListener('mousedown', handleClickOutside)
+        return () => document.removeEventListener('mousedown', handleClickOutside)
+    }, [])
 
     const fetchOrders = async () => {
         try {
@@ -91,6 +104,21 @@ function TicketNew() {
         }
     }
 
+    const handleSelectOrder = (id) => {
+        setOrderId(id)
+        setDropdownOpen(false)
+    }
+
+    const getSelectedOrderText = () => {
+        if (!orderId) return '不关联订单'
+        const order = orders.find(o => o.id === orderId)
+        if (!order) return '不关联订单'
+        return `${order.productName} · ¥${parseFloat(order.totalAmount).toFixed(2)}`
+    }
+
+    // 只显示最新5个订单
+    const displayOrders = orders.slice(0, 5)
+
     return (
         <div className="ticket-new-page">
             <button className="back-btn" onClick={() => navigate('/tickets')}>
@@ -128,26 +156,53 @@ function TicketNew() {
                         </div>
                     </div>
 
-                    {/* 关联订单 */}
+                    {/* 关联订单 - 自定义下拉 */}
                     {orders.length > 0 && (
                         <div className="form-group">
                             <label>
                                 <FiPackage />
                                 关联订单（可选）
                             </label>
-                            <div className="custom-select-wrapper">
-                                <select
-                                    className="custom-select"
-                                    value={orderId}
-                                    onChange={(e) => setOrderId(e.target.value)}
+                            <div className="custom-dropdown" ref={dropdownRef}>
+                                <button
+                                    type="button"
+                                    className={`dropdown-trigger ${dropdownOpen ? 'open' : ''}`}
+                                    onClick={() => setDropdownOpen(!dropdownOpen)}
                                 >
-                                    <option value="">不关联订单</option>
-                                    {orders.map(order => (
-                                        <option key={order.id} value={order.id}>
-                                            {order.productName} · {order.orderNo} · ¥{parseFloat(order.totalAmount).toFixed(2)}
-                                        </option>
-                                    ))}
-                                </select>
+                                    <span className="dropdown-value">{getSelectedOrderText()}</span>
+                                    <FiChevronDown className="dropdown-arrow" />
+                                </button>
+                                {dropdownOpen && (
+                                    <div className="dropdown-menu">
+                                        <div
+                                            className={`dropdown-item ${orderId === '' ? 'selected' : ''}`}
+                                            onClick={() => handleSelectOrder('')}
+                                        >
+                                            <span className="item-text">不关联订单</span>
+                                            {orderId === '' && <FiCheck className="item-check" />}
+                                        </div>
+                                        <div className="dropdown-divider" />
+                                        {displayOrders.map(order => (
+                                            <div
+                                                key={order.id}
+                                                className={`dropdown-item ${orderId === order.id ? 'selected' : ''}`}
+                                                onClick={() => handleSelectOrder(order.id)}
+                                            >
+                                                <div className="item-content">
+                                                    <span className="item-product">{order.productName}</span>
+                                                    <div className="item-meta">
+                                                        <span className="item-order-no">{order.orderNo}</span>
+                                                        <span className="item-amount">¥{parseFloat(order.totalAmount).toFixed(2)}</span>
+                                                    </div>
+                                                </div>
+                                                {orderId === order.id && <FiCheck className="item-check" />}
+                                            </div>
+                                        ))}
+                                        {orders.length > 5 && (
+                                            <div className="dropdown-hint">仅显示最近 5 个订单</div>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}
@@ -197,3 +252,4 @@ function TicketNew() {
 }
 
 export default TicketNew
+
