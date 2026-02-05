@@ -946,6 +946,7 @@
     gap: 4px;
     white-space: nowrap;
     flex-shrink: 0;
+    width: auto;
 }
 
 .empty-state {

@@ -185,6 +185,7 @@
     color: var(--text-muted);
     white-space: nowrap;
     flex-shrink: 0;
+    width: auto;
 }
 
 /* 加载状态 */
