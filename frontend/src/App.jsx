@@ -18,7 +18,6 @@ import VerifyEmail from './pages/VerifyEmail'
 import ForgotPassword from './pages/Auth/ForgotPassword'
 import ResetPassword from './pages/Auth/ResetPassword'
 import NotFound from './pages/NotFound'
-import Tickets from './pages/Tickets'
 import TicketNew from './pages/TicketNew'
 import TicketDetail from './pages/TicketDetail'
 import { useThemeStore } from './store/themeStore'
@@ -155,7 +154,6 @@ function App() {
                                 : <NotFound />
                         } />
                         <Route path="/search" element={<Search />} />
-                        <Route path="/tickets" element={<Tickets />} />
                         <Route path="/tickets/new" element={<TicketNew />} />
                         <Route path="/tickets/:id" element={<TicketDetail />} />
                         <Route path="*" element={<NotFound />} />
