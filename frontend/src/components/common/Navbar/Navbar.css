@@ -630,6 +630,19 @@
     .navbar-links {
         display: none;
     }
+
+    /* 移动端用户头像居中 */
+    .nav-user {
+        padding: 4px;
+        border-radius: 50%;
+        gap: 0;
+    }
+
+    .nav-user .user-avatar {
+        width: 34px;
+        height: 34px;
+    }
+
 }
 
 /* 移动端搜索覆盖层 */

@@ -328,6 +328,7 @@
 /* 服务保障 */
 .service-guarantee {
     display: flex;
+    justify-content: center;
     gap: 24px;
     padding: 16px 20px;
     background: var(--bg-card);
