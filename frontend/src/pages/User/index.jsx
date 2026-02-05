@@ -114,7 +114,11 @@ function ProfilePage() {
                     <div className="info-row">
                         <FiCalendar />
                         <span className="info-label">注册时间</span>
-                        <span className="info-value">{user?.createdAt || '2024-01-01'}</span>
+                        <span className="info-value">
+                            {user?.createdAt
+                                ? new Date(user.createdAt).toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' })
+                                : '-'}
+                        </span>
                     </div>
                 </div>
             </div>

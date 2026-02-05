@@ -552,18 +552,108 @@
     .profile-card {
         flex-direction: column;
         text-align: center;
+        padding: 24px 20px;
+    }
+
+    .profile-avatar {
+        width: 80px;
+        height: 80px;
+        margin-bottom: 16px;
+    }
+
+    .avatar-placeholder {
+        font-size: 2rem;
+    }
+
+    .profile-info {
+        width: 100%;
     }
 
     .info-row {
-        justify-content: center;
+        justify-content: flex-start;
+        padding: 10px 0;
+        gap: 8px;
     }
 
+    .info-row svg {
+        width: 18px;
+        flex-shrink: 0;
+    }
+
+    .info-label {
+        width: 70px;
+        flex-shrink: 0;
+        text-align: left;
+    }
+
+    .info-value {
+        flex: 1;
+        word-break: break-all;
+        text-align: left;
+    }
+
+    /* 统计卡片改为3列横排 */
     .stats-cards {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+    }
+
+    .profile-page .stat-card {
+        padding: 16px 12px;
+    }
+
+    .profile-page .stat-value {
+        font-size: 1.25rem;
+        margin-bottom: 4px;
+    }
+
+    .profile-page .stat-label {
+        font-size: 0.8rem;
     }
 
     .order-main {
         flex-wrap: wrap;
+    }
+}
+
+/* 更小屏幕 */
+@media (max-width: 480px) {
+    .user-main h2 {
+        font-size: 1.25rem;
+        margin-bottom: 16px;
+    }
+
+    .profile-card {
+        padding: 20px 16px;
+    }
+
+    .profile-avatar {
+        width: 70px;
+        height: 70px;
+    }
+
+    .avatar-placeholder {
+        font-size: 1.75rem;
+    }
+
+    .info-row {
+        font-size: 0.9rem;
+    }
+
+    .stats-cards {
+        gap: 8px;
+    }
+
+    .profile-page .stat-card {
+        padding: 14px 8px;
+    }
+
+    .profile-page .stat-value {
+        font-size: 1.1rem;
+    }
+
+    .profile-page .stat-label {
+        font-size: 0.75rem;
     }
 }
 
