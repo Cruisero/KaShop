@@ -972,3 +972,46 @@
     padding: 40px;
     color: var(--text-muted);
 }
+
+/* 移动端工单列表优化 */
+@media (max-width: 480px) {
+    .ticket-card-embed {
+        padding: 16px;
+    }
+
+    .ticket-card-embed .ticket-header {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .ticket-card-embed .ticket-no {
+        font-size: 0.75rem;
+    }
+
+    .ticket-card-embed .ticket-subject {
+        font-size: 0.95rem;
+        margin-bottom: 8px;
+    }
+
+    .ticket-card-embed .ticket-meta {
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 10px;
+    }
+
+    .ticket-card-embed .ticket-order {
+        font-size: 0.75rem;
+        word-break: break-all;
+    }
+
+    .ticket-card-embed .ticket-footer {
+        padding-top: 10px;
+        border-top: 1px solid var(--border-color);
+        margin-top: 4px;
+    }
+
+    .ticket-card-embed .ticket-time,
+    .ticket-card-embed .ticket-messages {
+        white-space: nowrap;
+    }
+}
