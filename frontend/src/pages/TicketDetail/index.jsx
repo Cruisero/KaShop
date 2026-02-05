@@ -56,7 +56,7 @@ function TicketDetail() {
                 setTicket(data.ticket)
             } else {
                 toast.error(data.error || '获取工单失败')
-                navigate('/tickets')
+                navigate('/user/tickets')
             }
         } catch (error) {
             console.error('获取工单失败:', error)
@@ -128,7 +128,7 @@ function TicketDetail() {
 
     return (
         <div className="ticket-detail-page">
-            <button className="back-btn" onClick={() => navigate('/tickets')}>
+            <button className="back-btn" onClick={() => navigate('/user/tickets')}>
                 <FiArrowLeft />
                 返回工单列表
             </button>

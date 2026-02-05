@@ -27,7 +27,7 @@ function TicketNew() {
 
     useEffect(() => {
         if (!isAuthenticated) {
-            navigate('/login?redirect=/tickets/new')
+            navigate('/login?redirect=/user/tickets')
             return
         }
         fetchOrders()
@@ -121,7 +121,7 @@ function TicketNew() {
 
     return (
         <div className="ticket-new-page">
-            <button className="back-btn" onClick={() => navigate('/tickets')}>
+            <button className="back-btn" onClick={() => navigate('/user/tickets')}>
                 <FiArrowLeft />
                 返回工单列表
             </button>
