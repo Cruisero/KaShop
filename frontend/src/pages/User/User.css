@@ -210,6 +210,162 @@
     border-radius: 4px;
 }
 
+/* ==================== 个人资料 Hero 卡片 ==================== */
+.profile-hero-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+}
+
+.hero-top {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 30px;
+}
+
+.hero-avatar {
+    width: 80px;
+    height: 80px;
+    flex-shrink: 0;
+}
+
+.hero-avatar img,
+.hero-avatar .avatar-placeholder {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.hero-avatar .avatar-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--gradient-primary);
+    font-size: 2rem;
+    font-weight: 700;
+    color: white;
+}
+
+.hero-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.hero-name {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0 0 6px 0;
+}
+
+.hero-email {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin: 0 0 4px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.verified-tag {
+    display: inline-block;
+    padding: 2px 8px;
+    background: rgba(16, 185, 129, 0.15);
+    color: #10b981;
+    font-size: 0.75rem;
+    border-radius: 10px;
+    font-weight: 500;
+}
+
+.unverified-tag {
+    display: inline-block;
+    padding: 2px 8px;
+    background: rgba(239, 68, 68, 0.15);
+    color: var(--error);
+    font-size: 0.75rem;
+    border-radius: 10px;
+    font-weight: 500;
+}
+
+.hero-date {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin: 0;
+}
+
+/* 统计数据横条 */
+.hero-stats {
+    display: flex;
+    border-top: 1px solid var(--border-color);
+    background: rgba(239, 68, 68, 0.03);
+}
+
+.hero-stat {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px 16px;
+    border-right: 1px solid var(--border-color);
+}
+
+.hero-stat:last-child {
+    border-right: none;
+}
+
+.stat-num {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--primary-light);
+    line-height: 1;
+    margin-bottom: 6px;
+}
+
+.stat-text {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+/* 移动端响应式 */
+@media (max-width: 480px) {
+    .hero-top {
+        flex-direction: column;
+        text-align: center;
+        padding: 24px 20px;
+    }
+
+    .hero-avatar {
+        width: 70px;
+        height: 70px;
+        margin-bottom: 8px;
+    }
+
+    .hero-avatar .avatar-placeholder {
+        font-size: 1.75rem;
+    }
+
+    .hero-name {
+        font-size: 1.25rem;
+    }
+
+    .hero-email {
+        justify-content: center;
+        font-size: 0.85rem;
+    }
+
+    .hero-stat {
+        padding: 16px 12px;
+    }
+
+    .stat-num {
+        font-size: 1.3rem;
+    }
+}
+
 /* 个人信息页 */
 .profile-card {
     display: flex;

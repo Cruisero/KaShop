@@ -80,65 +80,52 @@ function ProfilePage() {
                 </div>
             )}
 
-            <div className="profile-card">
-                <div className="profile-avatar">
-                    {user?.avatar ? (
-                        <img src={user.avatar} alt={user.username} />
-                    ) : (
-                        <div className="avatar-placeholder">
-                            {user?.username?.charAt(0)?.toUpperCase() || 'U'}
-                        </div>
-                    )}
-                </div>
-
-                <div className="profile-info">
-                    <div className="info-row">
-                        <FiUser />
-                        <span className="info-label">用户名</span>
-                        <span className="info-value">{user?.username || '未设置'}</span>
+            {/* 个人资料卡片 - 现代设计 */}
+            <div className="profile-hero-card">
+                <div className="hero-top">
+                    <div className="hero-avatar">
+                        {user?.avatar ? (
+                            <img src={user.avatar} alt={user.username} />
+                        ) : (
+                            <div className="avatar-placeholder">
+                                {user?.username?.charAt(0)?.toUpperCase() || 'U'}
+                            </div>
+                        )}
                     </div>
-                    <div className="info-row">
-                        <FiMail />
-                        <span className="info-label">邮箱</span>
-                        <span className="info-value">
-                            {user?.email || '未绑定'}
+                    <div className="hero-info">
+                        <h3 className="hero-name">{user?.username || '用户'}</h3>
+                        <p className="hero-email">
+                            {user?.email || '未绑定邮箱'}
                             {user?.role !== 'ADMIN' && (
                                 user?.emailVerified ? (
-                                    <span className="verified-badge">✓ 已验证</span>
+                                    <span className="verified-tag">已验证</span>
                                 ) : (
-                                    <span className="unverified-badge">未验证</span>
+                                    <span className="unverified-tag">未验证</span>
                                 )
                             )}
-                        </span>
-                    </div>
-                    <div className="info-row">
-                        <FiCalendar />
-                        <span className="info-label">注册时间</span>
-                        <span className="info-value">
+                        </p>
+                        <p className="hero-date">
                             {user?.createdAt
-                                ? new Date(user.createdAt).toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' })
-                                : '-'}
-                        </span>
+                                ? `注册于 ${new Date(user.createdAt).toLocaleDateString('zh-CN', { year: 'numeric', month: 'short', day: 'numeric' })}`
+                                : ''}
+                        </p>
                     </div>
                 </div>
-            </div>
 
-            <div className="stats-cards">
-                <div className="stat-card">
-                    <span className="stat-value">{stats.total}</span>
-                    <span className="stat-label">总订单</span>
-                </div>
-                <div className="stat-card">
-                    <span className="stat-value">
-                        ¥{stats.spent.toFixed(2)}
-                    </span>
-                    <span className="stat-label">总消费</span>
-                </div>
-                <div className="stat-card">
-                    <span className="stat-value">
-                        {stats.completed}
-                    </span>
-                    <span className="stat-label">已完成</span>
+                {/* 统计数据横条 */}
+                <div className="hero-stats">
+                    <div className="hero-stat">
+                        <span className="stat-num">{stats.total}</span>
+                        <span className="stat-text">订单</span>
+                    </div>
+                    <div className="hero-stat">
+                        <span className="stat-num">¥{stats.spent.toFixed(0)}</span>
+                        <span className="stat-text">消费</span>
+                    </div>
+                    <div className="hero-stat">
+                        <span className="stat-num">{stats.completed}</span>
+                        <span className="stat-text">完成</span>
+                    </div>
                 </div>
             </div>
         </div>
