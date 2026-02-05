@@ -31,10 +31,10 @@ app.use(morgan('combined', {
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 
-// 请求限流
+// 请求限流 (开发环境放宽限制)
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15分钟
-    max: 100, // 限制每IP 100次请求
+    max: process.env.NODE_ENV === 'production' ? 100 : 1000, // 开发环境1000次，生产环境100次
     message: { error: '请求过于频繁，请稍后再试' }
 })
 app.use('/api', limiter)
