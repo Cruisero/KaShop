@@ -933,6 +933,8 @@
 .ticket-card-embed .ticket-footer {
     display: flex;
     justify-content: space-between;
+    align-items: center;
+    flex-wrap: nowrap;
     font-size: 0.8rem;
     color: var(--text-muted);
 }
