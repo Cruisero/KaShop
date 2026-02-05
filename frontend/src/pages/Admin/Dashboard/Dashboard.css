@@ -2879,7 +2879,7 @@
 
 /* 消息列表 */
 .ticket-messages {
-    margin-top: 20px;
+    /* margin-top: 20px; */
     width: 100%;
 }
 

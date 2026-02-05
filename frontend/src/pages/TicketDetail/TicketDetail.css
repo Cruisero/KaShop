@@ -238,17 +238,110 @@
 
 /* 响应式 */
 @media (max-width: 600px) {
+    .ticket-detail-page {
+        padding: 12px 0;
+    }
+
+    .ticket-detail-page .back-btn {
+        padding: 8px 14px;
+        font-size: 0.85rem;
+        margin-bottom: 16px;
+    }
+
+    .ticket-info-card {
+        padding: 16px;
+        margin-bottom: 16px;
+    }
+
+    .ticket-info-header {
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .ticket-info-card .ticket-no {
+        font-size: 0.75rem;
+    }
+
+    .ticket-info-card .ticket-status {
+        padding: 4px 10px;
+        font-size: 0.75rem;
+    }
+
+    .ticket-info-card .ticket-subject {
+        font-size: 1.1rem;
+        margin-bottom: 12px;
+    }
+
     .ticket-info-card .ticket-meta {
         flex-direction: column;
-        gap: 8px;
+        gap: 10px;
+    }
+
+    .ticket-info-card .meta-item {
+        font-size: 0.8rem;
+        flex-wrap: wrap;
+    }
+
+    .ticket-info-card .order-product {
+        margin-left: 0;
+        display: block;
+        margin-top: 2px;
+    }
+
+    .messages-list {
+        padding: 16px;
+        max-height: 400px;
+    }
+
+    .message-item {
+        gap: 10px;
+    }
+
+    .message-avatar {
+        width: 32px;
+        height: 32px;
+        font-size: 1rem;
+    }
+
+    .message-header {
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    .message-sender {
+        font-size: 0.85rem;
+    }
+
+    .message-time {
+        font-size: 0.75rem;
+    }
+
+    .message-text {
+        padding: 10px 12px;
+        font-size: 0.9rem;
+        border-radius: 10px;
+        border-top-left-radius: 3px;
     }
 
     .message-input-form {
+        padding: 12px 16px 16px;
         flex-direction: column;
+        gap: 10px;
+    }
+
+    .message-input {
+        padding: 10px 12px;
+        font-size: 0.9rem;
     }
 
     .send-btn {
         width: 100%;
         justify-content: center;
+        padding: 10px 20px;
+    }
+
+    .ticket-closed-notice {
+        padding: 16px;
+        font-size: 0.9rem;
     }
 }
