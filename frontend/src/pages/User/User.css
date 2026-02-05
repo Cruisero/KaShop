@@ -1005,6 +1005,9 @@
     }
 
     .ticket-card-embed .ticket-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
         padding-top: 10px;
         border-top: 1px solid var(--border-color);
         margin-top: 4px;
@@ -1012,6 +1015,9 @@
 
     .ticket-card-embed .ticket-time,
     .ticket-card-embed .ticket-messages {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
         white-space: nowrap;
     }
 }
