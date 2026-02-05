@@ -462,10 +462,11 @@ function TicketsPage() {
         const now = new Date()
         const diff = now - date
 
+        // 使用不间断空格 \u00A0 防止换行
         if (diff < 60000) return '刚刚'
-        if (diff < 3600000) return `${Math.floor(diff / 60000)} 分钟前`
-        if (diff < 86400000) return `${Math.floor(diff / 3600000)} 小时前`
-        if (diff < 604800000) return `${Math.floor(diff / 86400000)} 天前`
+        if (diff < 3600000) return `${Math.floor(diff / 60000)}分钟前`
+        if (diff < 86400000) return `${Math.floor(diff / 3600000)}小时前`
+        if (diff < 604800000) return `${Math.floor(diff / 86400000)}天前`
 
         return date.toLocaleDateString('zh-CN')
     }
