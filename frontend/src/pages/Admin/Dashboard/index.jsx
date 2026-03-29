@@ -2848,8 +2848,7 @@ function BackupSettings({ token, settings, handleChange, showToast }) {
             })
             const data = await res.json()
             if (data.success) {
-                const emailMsg = data.emailSent ? '，已推送至邮箱 📧' : ''
-                showToast(`备份完成: ${data.filename} (${data.sizeMB} MB)${emailMsg}`, 'success')
+                showToast(`备份完成: ${data.filename} (${data.sizeMB} MB)`, 'success')
                 loadBackupStatus()
             } else {
                 showToast(`备份失败: ${data.error}`, 'error')
@@ -2881,6 +2880,31 @@ function BackupSettings({ token, settings, handleChange, showToast }) {
         if (bytes < 1024) return bytes + ' B'
         if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
         return (bytes / (1024 * 1024)).toFixed(2) + ' MB'
+    }
+
+    const handleDownloadBackup = async (filename) => {
+        try {
+            const res = await fetch(`/api/admin/backup/download/${encodeURIComponent(filename)}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            })
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}))
+                showToast(data.error || '下载失败', 'error')
+                return
+            }
+            const blob = await res.blob()
+            const url = window.URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.href = url
+            a.download = filename
+            document.body.appendChild(a)
+            a.click()
+            a.remove()
+            window.URL.revokeObjectURL(url)
+            showToast('备份文件下载已开始', 'success')
+        } catch (e) {
+            showToast('下载请求失败', 'error')
+        }
     }
 
     return (
@@ -3026,7 +3050,7 @@ function BackupSettings({ token, settings, handleChange, showToast }) {
                                         历史备份文件
                                     </div>
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                        {backupStatus.backups.slice(0, 8).map((b, i) => (
+                                        {backupStatus.backups.slice(0, 6).map((b, i) => (
                                             <div key={b.filename} style={{
                                                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                                                 padding: '10px 14px', borderRadius: '10px',
@@ -3045,12 +3069,20 @@ function BackupSettings({ token, settings, handleChange, showToast }) {
                                                         </div>
                                                     </div>
                                                 </div>
-                                                <span style={{
-                                                    padding: '4px 10px', borderRadius: '20px', fontSize: '0.72rem', fontWeight: 600,
-                                                    background: 'linear-gradient(135deg, rgba(59,130,246,0.1), rgba(37,99,235,0.1))',
-                                                    color: '#2563eb', border: '1px solid rgba(59,130,246,0.2)'
-                                                }}>
-                                                    {formatSize(b.size)}
+                                                <span
+                                                    onClick={() => handleDownloadBackup(b.filename)}
+                                                    title="点击下载备份文件"
+                                                    style={{
+                                                        padding: '4px 10px', borderRadius: '20px', fontSize: '0.72rem', fontWeight: 600,
+                                                        background: 'linear-gradient(135deg, rgba(59,130,246,0.1), rgba(37,99,235,0.1))',
+                                                        color: '#2563eb', border: '1px solid rgba(59,130,246,0.2)',
+                                                        cursor: 'pointer', transition: 'all 0.2s ease',
+                                                        userSelect: 'none'
+                                                    }}
+                                                    onMouseEnter={e => { e.target.style.background = 'linear-gradient(135deg, #2563eb, #3b82f6)'; e.target.style.color = 'white'; e.target.style.boxShadow = '0 2px 8px rgba(37,99,235,0.3)' }}
+                                                    onMouseLeave={e => { e.target.style.background = 'linear-gradient(135deg, rgba(59,130,246,0.1), rgba(37,99,235,0.1))'; e.target.style.color = '#2563eb'; e.target.style.boxShadow = 'none' }}
+                                                >
+                                                    ⬇ {formatSize(b.size)}
                                                 </span>
                                             </div>
                                         ))}

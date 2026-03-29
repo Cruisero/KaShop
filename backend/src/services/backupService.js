@@ -66,7 +66,7 @@ const performBackup = async () => {
     const filepath = path.join(BACKUP_DIR, filename)
 
     return new Promise((resolve, reject) => {
-        const cmd = `mysqldump -h ${db.host} -P ${db.port} -u ${db.user} -p'${db.password}' --single-transaction --quick ${db.database} > ${filepath}`
+        const cmd = `mysqldump -h ${db.host} -P ${db.port} -u ${db.user} -p'${db.password}' --ssl=false --single-transaction --quick ${db.database} > ${filepath}`
 
         logger.info(`执行备份命令: mysqldump -h ${db.host} -P ${db.port} -u ${db.user} --single-transaction --quick ${db.database}`)
 
@@ -174,8 +174,7 @@ const sendBackupEmail = async (backupResult) => {
 }
 
 // 执行完整备份流程
-// forceEmail: 手动触发时为 true，只要配置了邮箱就推送，不受开关限制
-const runBackup = async (forceEmail = false) => {
+const runBackup = async () => {
     try {
         const settings = await getBackupSettings()
 
@@ -189,13 +188,9 @@ const runBackup = async (forceEmail = false) => {
             logger.info(`已清理 ${deleted} 个过期备份文件`)
         }
 
-        // 发送邮件通知
-        // 手动触发时：只要配置了邮箱就推送
-        // 定时触发时：需要邮件开关开启且配置了邮箱
-        const shouldSendEmail = forceEmail ? !!settings.email : (settings.emailEnabled && settings.email)
-        if (shouldSendEmail) {
-            const emailSent = await sendBackupEmail(result)
-            result.emailSent = emailSent
+        // 定时备份时：邮件开关开启且配置了邮箱才发送
+        if (settings.emailEnabled && settings.email) {
+            await sendBackupEmail(result)
         }
 
         return result
@@ -203,6 +198,19 @@ const runBackup = async (forceEmail = false) => {
         logger.error('备份流程执行失败:', error)
         return null
     }
+}
+
+// 按文件名推送备份到邮箱
+const sendBackupByFilename = async (filename) => {
+    const filepath = path.join(BACKUP_DIR, filename)
+    if (!fs.existsSync(filepath)) {
+        throw new Error('备份文件不存在')
+    }
+    const stat = fs.statSync(filepath)
+    const result = { filepath, filename, size: stat.size }
+    const sent = await sendBackupEmail(result)
+    if (!sent) throw new Error('邮件发送失败，请检查邮箱和 SMTP 配置')
+    return true
 }
 
 // 频率转换为 cron 表达式
@@ -263,15 +271,17 @@ const getBackupStatus = () => {
         isRunning: backupJob !== null,
         lastBackup: lastBackupInfo,
         backupCount: files.length,
-        backups: files.slice(0, 10), // 最近10个
+        backups: files.slice(0, 6), // 最近10个
         totalSize: files.reduce((sum, f) => sum + f.size, 0)
     }
 }
 
 module.exports = {
+    performBackup,
     runBackup,
     startBackupSchedule,
     stopBackupSchedule,
     getBackupStatus,
-    getBackupSettings
+    getBackupSettings,
+    sendBackupByFilename
 }

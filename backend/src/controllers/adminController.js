@@ -985,15 +985,13 @@ exports.getBackupStatus = async (req, res, next) => {
     }
 }
 
-// 手动执行备份
+// 手动执行备份（不推送邮件）
 exports.runBackup = async (req, res, next) => {
     try {
         const backupService = require('../services/backupService')
-        // 手动触发备份，forceEmail=true: 只要配置了邮箱就推送
-        const result = await backupService.runBackup(true)
+        const result = await backupService.performBackup()
         if (result) {
-            const msg = result.emailSent ? '备份完成，已推送至邮箱' : '备份完成'
-            res.json({ success: true, message: msg, emailSent: !!result.emailSent, ...result })
+            res.json({ success: true, message: '备份完成', ...result })
         } else {
             res.status(500).json({ success: false, error: '备份失败，请查看服务器日志' })
         }
@@ -1009,6 +1007,44 @@ exports.restartBackupSchedule = async (req, res, next) => {
         await backupService.startBackupSchedule()
         const settings = await backupService.getBackupSettings()
         res.json({ success: true, message: '备份计划已更新', settings })
+    } catch (error) {
+        next(error)
+    }
+}
+
+// 推送备份文件到邮箱
+exports.emailBackup = async (req, res, next) => {
+    try {
+        const { filename } = req.body
+        if (!filename) {
+            return res.status(400).json({ success: false, error: '缺少文件名' })
+        }
+        const backupService = require('../services/backupService')
+        await backupService.sendBackupByFilename(filename)
+        res.json({ success: true, message: '备份已推送至邮箱' })
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message || '推送失败' })
+    }
+}
+
+// 下载备份文件
+exports.downloadBackup = async (req, res, next) => {
+    try {
+        const { filename } = req.params
+        if (!filename || !filename.endsWith('.sql')) {
+            return res.status(400).json({ error: '无效的文件名' })
+        }
+        const path = require('path')
+        const fs = require('fs')
+        const BACKUP_DIR = '/app/backups'
+        const filepath = path.join(BACKUP_DIR, path.basename(filename))
+        if (!fs.existsSync(filepath)) {
+            return res.status(404).json({ error: '备份文件不存在' })
+        }
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`)
+        res.setHeader('Content-Type', 'application/sql')
+        const fileStream = fs.createReadStream(filepath)
+        fileStream.pipe(res)
     } catch (error) {
         next(error)
     }

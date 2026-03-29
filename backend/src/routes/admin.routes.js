@@ -47,5 +47,7 @@ router.post('/cards/batch-delete', adminController.deleteCards)
 router.get('/backup/status', adminController.getBackupStatus)
 router.post('/backup/run', adminController.runBackup)
 router.post('/backup/restart-schedule', adminController.restartBackupSchedule)
+router.post('/backup/email', adminController.emailBackup)
+router.get('/backup/download/:filename', adminController.downloadBackup)
 
 module.exports = router
