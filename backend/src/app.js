@@ -34,7 +34,7 @@ app.use(express.urlencoded({ extended: true }))
 // 请求限流 (开发环境放宽限制)
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15分钟
-    max: process.env.NODE_ENV === 'production' ? 100 : 1000, // 开发环境1000次，生产环境100次
+    max: process.env.NODE_ENV === 'production' ? 500 : 1000, // 开发环境1000次，生产环境500次
     message: { error: '请求过于频繁，请稍后再试' }
 })
 app.use('/api', limiter)
@@ -56,6 +56,10 @@ initScheduledTasks()
 // 启动 USDT 支付监控
 const usdtService = require('./services/usdtService')
 usdtService.startPolling()
+
+// 启动 BSC USDT 支付监控
+const bscUsdtService = require('./services/bscUsdtService')
+bscUsdtService.startPolling()
 
 // 404 处理
 app.use((req, res) => {

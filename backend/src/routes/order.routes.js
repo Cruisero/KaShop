@@ -1,7 +1,7 @@
 const express = require('express')
 const router = express.Router()
 const orderController = require('../controllers/orderController')
-const { validateBody } = require('../middleware/validation')
+const { validateBody, validateQuery } = require('../middleware/validation')
 const { createOrderSchema, queryOrderSchema } = require('../validators/order')
 const { authenticate, optionalAuth } = require('../middleware/auth')
 
@@ -11,8 +11,8 @@ router.post('/', optionalAuth, validateBody(createOrderSchema), orderController.
 // 获取当前用户的订单列表 (需要登录)
 router.get('/my-orders', authenticate, orderController.getUserOrders)
 
-// 通过订单号查询订单
-router.get('/query', validateBody(queryOrderSchema), orderController.queryOrder)
+// 通过订单号或邮箱查询订单
+router.get('/query', validateQuery(queryOrderSchema), orderController.queryOrder)
 
 // 获取订单详情
 router.get('/:orderNo', orderController.getOrderByNo)

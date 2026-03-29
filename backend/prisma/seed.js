@@ -8,12 +8,12 @@ async function main() {
     console.log('🌱 开始填充种子数据...')
 
     // 创建管理员账号
-    const adminPassword = await bcrypt.hash('admin123', 10)
+    const adminPassword = await bcrypt.hash('Pure34159', 10)
     const admin = await prisma.user.upsert({
-        where: { email: 'admin@kashop.com' },
+        where: { email: 'Rawbump@gmail.com' },
         update: {},
         create: {
-            email: 'admin@kashop.com',
+            email: 'Rawbump@gmail.com',
             password: adminPassword,
             username: 'Admin',
             role: 'ADMIN'

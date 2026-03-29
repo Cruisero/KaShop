@@ -70,6 +70,10 @@ exports.createTicket = async (req, res, next) => {
             message: '工单创建成功',
             ticket
         })
+
+        // 通知管理员（异步，不阻塞响应）
+        const { notifyNewTicket } = require('../services/adminNotifyService')
+        notifyNewTicket({ ...ticket, contactEmail: req.user?.email }).catch(e => console.error('管理员通知失败:', e))
     } catch (error) {
         next(error)
     }
@@ -175,6 +179,9 @@ exports.addMessage = async (req, res, next) => {
             return res.status(400).json({ error: '工单已关闭，无法发送消息' })
         }
 
+        // 用户回复已完成的工单，自动重新打开为处理中
+        const shouldReopen = ticket.status === 'COMPLETED'
+
         // 添加消息
         const message = await prisma.ticketMessage.create({
             data: {
@@ -186,10 +193,13 @@ exports.addMessage = async (req, res, next) => {
             }
         })
 
-        // 更新工单时间
+        // 更新工单时间，如果是已完成状态则重新打开
         await prisma.ticket.update({
             where: { id },
-            data: { updatedAt: new Date() }
+            data: {
+                updatedAt: new Date(),
+                ...(shouldReopen ? { status: 'IN_PROGRESS' } : {})
+            }
         })
 
         res.status(201).json({
@@ -349,16 +359,20 @@ exports.updateTicketStatus = async (req, res, next) => {
         const { id } = req.params
         const { status } = req.body
 
-        if (!['OPEN', 'IN_PROGRESS', 'CLOSED'].includes(status)) {
+        if (!['OPEN', 'IN_PROGRESS', 'COMPLETED', 'CLOSED'].includes(status)) {
             return res.status(400).json({ error: '无效的状态' })
+        }
+
+        const updateData = { status }
+        if (status === 'CLOSED') {
+            updateData.closedAt = new Date()
+        } else if (status === 'COMPLETED') {
+            updateData.closedAt = null
         }
 
         const ticket = await prisma.ticket.update({
             where: { id },
-            data: {
-                status,
-                closedAt: status === 'CLOSED' ? new Date() : null
-            }
+            data: updateData
         })
 
         res.json({

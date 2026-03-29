@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { FiPlus, FiMessageCircle, FiClock, FiCheck, FiAlertCircle } from 'react-icons/fi'
+import { FiPlus, FiMessageCircle, FiClock, FiCheck, FiAlertCircle, FiCheckCircle } from 'react-icons/fi'
 import { useAuthStore } from '../../store/authStore'
 import './Tickets.css'
 
 const statusMap = {
     OPEN: { label: '待处理', class: 'open', icon: <FiAlertCircle /> },
     IN_PROGRESS: { label: '处理中', class: 'in-progress', icon: <FiClock /> },
+    COMPLETED: { label: '已完成', class: 'completed', icon: <FiCheckCircle /> },
     CLOSED: { label: '已关闭', class: 'closed', icon: <FiCheck /> }
 }
 
@@ -103,6 +104,12 @@ function Tickets() {
                     onClick={() => setFilter('IN_PROGRESS')}
                 >
                     处理中
+                </button>
+                <button
+                    className={`filter-btn ${filter === 'COMPLETED' ? 'active' : ''}`}
+                    onClick={() => setFilter('COMPLETED')}
+                >
+                    已完成
                 </button>
                 <button
                     className={`filter-btn ${filter === 'CLOSED' ? 'active' : ''}`}

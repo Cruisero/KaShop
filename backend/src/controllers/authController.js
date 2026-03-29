@@ -45,6 +45,24 @@ exports.register = async (req, res, next) => {
             }
         })
 
+        // 关联该邮箱下的游客订单到新账号
+        try {
+            const result = await prisma.order.updateMany({
+                where: {
+                    email: email,
+                    userId: null
+                },
+                data: {
+                    userId: user.id
+                }
+            })
+            if (result.count > 0) {
+                console.log(`已将 ${result.count} 个游客订单关联到用户 ${email}`)
+            }
+        } catch (err) {
+            console.error('关联游客订单失败:', err)
+        }
+
         // 发送验证邮件
         const emailService = require('../services/emailService')
         const baseUrl = req.headers.origin || 'http://localhost:3000'
@@ -71,6 +89,10 @@ exports.register = async (req, res, next) => {
             },
             token
         })
+
+        // 通知管理员（异步，不阻塞响应）
+        const { notifyNewUser } = require('../services/adminNotifyService')
+        notifyNewUser(user).catch(e => console.error('管理员通知失败:', e))
     } catch (error) {
         next(error)
     }

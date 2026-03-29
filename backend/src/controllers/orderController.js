@@ -4,9 +4,11 @@ const { nanoid } = require('nanoid')
 
 // 生成订单号
 const generateOrderNo = () => {
+    const crypto = require('crypto')
     const date = new Date()
     const dateStr = date.toISOString().slice(0, 10).replace(/-/g, '')
-    return `KA${dateStr}${nanoid(6).toUpperCase()}`
+    const random = crypto.randomBytes(9).toString('base64url').slice(0, 12).toUpperCase()
+    return `KA${dateStr}${random}`
 }
 
 // 创建订单
@@ -116,28 +118,53 @@ exports.queryOrder = async (req, res, next) => {
     try {
         const { orderNo, email } = req.query
 
-        const where = { orderNo }
-        if (email) {
-            where.email = email
+        if (!orderNo && !email) {
+            return res.status(400).json({ error: '请输入订单号或邮箱' })
         }
 
-        const order = await prisma.order.findFirst({
-            where,
+        // 通过订单号查询（精确查找单个订单）
+        if (orderNo) {
+            const where = { orderNo }
+            if (email) {
+                where.email = email
+            }
+
+            const order = await prisma.order.findFirst({
+                where,
+                include: {
+                    product: {
+                        select: { id: true, name: true, image: true, deliveryNote: true }
+                    },
+                    cards: {
+                        select: { id: true, content: true }
+                    }
+                }
+            })
+
+            if (!order) {
+                return res.status(404).json({ error: '订单不存在' })
+            }
+
+            return res.json({ order: formatOrder(order) })
+        }
+
+        // 通过邮箱查询（返回该邮箱下的所有订单列表）
+        const orders = await prisma.order.findMany({
+            where: { email },
             include: {
                 product: {
-                    select: { id: true, name: true, image: true }
-                },
-                cards: order?.status === 'COMPLETED' ? {
-                    select: { id: true, content: true }
-                } : false
-            }
+                    select: { id: true, name: true, image: true, deliveryNote: true }
+                }
+            },
+            orderBy: { createdAt: 'desc' },
+            take: 50
         })
 
-        if (!order) {
-            return res.status(404).json({ error: '订单不存在' })
+        if (orders.length === 0) {
+            return res.status(404).json({ error: '未找到该邮箱关联的订单' })
         }
 
-        res.json({ order: formatOrder(order) })
+        res.json({ orders: orders.map(formatOrder) })
     } catch (error) {
         next(error)
     }
@@ -152,7 +179,7 @@ exports.getOrderByNo = async (req, res, next) => {
             where: { orderNo },
             include: {
                 product: {
-                    select: { id: true, name: true, image: true }
+                    select: { id: true, name: true, image: true, deliveryNote: true }
                 },
                 cards: {
                     select: { id: true, content: true }
@@ -230,6 +257,7 @@ exports.getOrderCards = async (req, res, next) => {
 // 格式化订单数据
 function formatOrder(order) {
     return {
+        id: order.id,
         orderNo: order.orderNo,
         email: order.email,
         product: order.product,
@@ -242,7 +270,8 @@ function formatOrder(order) {
         paidAt: order.paidAt,
         completedAt: order.completedAt,
         createdAt: order.createdAt,
-        cards: order.cards || []
+        cards: order.cards || [],
+        deliveryNote: order.product?.deliveryNote || null
     }
 }
 

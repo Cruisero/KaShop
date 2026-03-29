@@ -278,10 +278,10 @@ function Navbar() {
                             商品
                         </Link>
                         <Link
-                            to="/about"
-                            className={`nav-link ${location.pathname === '/about' ? 'active' : ''}`}
+                            to="/order-query"
+                            className={`nav-link ${location.pathname === '/order-query' ? 'active' : ''}`}
                         >
-                            关于
+                            订单查询
                         </Link>
                         <Link
                             to="/tickets/new"

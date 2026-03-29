@@ -1,8 +1,8 @@
 # 生产环境 Dockerfile
 FROM node:20-alpine
 
-# 安装 Prisma 所需的 OpenSSL
-RUN apk add --no-cache openssl
+# 安装 Prisma 所需的 OpenSSL 和备份所需的 mysql-client
+RUN apk add --no-cache openssl mysql-client
 
 WORKDIR /app
 

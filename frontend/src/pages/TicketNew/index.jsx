@@ -199,7 +199,7 @@ function TicketNew() {
                                             </div>
                                         ))}
                                         {orders.length > 5 && (
-                                            <div className="dropdown-hint">仅显示最近 5 个订单</div>
+                                            <div className="dropdown-hint">仅显示最近 5 个订单,如没有显示订单号,请在问题描述中填写</div>
                                         )}
                                     </div>
                                 )}

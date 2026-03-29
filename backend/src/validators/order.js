@@ -16,7 +16,7 @@ const createOrderSchema = Joi.object({
         'string.email': '请输入有效的邮箱地址',
         'any.required': '邮箱不能为空'
     }),
-    paymentMethod: Joi.string().valid('alipay', 'wechat', 'usdt').required().messages({
+    paymentMethod: Joi.string().valid('alipay', 'wechat', 'usdt', 'bsc_usdt').required().messages({
         'any.only': '不支持的支付方式',
         'any.required': '请选择支付方式'
     }),
@@ -27,10 +27,10 @@ const createOrderSchema = Joi.object({
 
 // 订单查询验证
 const queryOrderSchema = Joi.object({
-    orderNo: Joi.string().required().messages({
-        'any.required': '订单号不能为空'
-    }),
+    orderNo: Joi.string().optional(),
     email: Joi.string().email().optional()
+}).or('orderNo', 'email').messages({
+    'object.missing': '请输入订单号或邮箱'
 })
 
 module.exports = { createOrderSchema, queryOrderSchema }

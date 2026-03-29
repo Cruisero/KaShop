@@ -10,13 +10,15 @@ import './Checkout.css'
 const paymentIcons = {
     alipay: '💳',
     wechat: '💚',
-    usdt: '💰'
+    usdt: '💰',
+    bsc_usdt: '🟡'
 }
 
 const paymentColors = {
     alipay: '#1677ff',
     wechat: '#07c160',
-    usdt: '#26a17b'
+    usdt: '#26a17b',
+    bsc_usdt: '#f3ba2f'
 }
 
 function Checkout() {
@@ -84,8 +86,15 @@ function Checkout() {
     const handleSubmit = async (e) => {
         e.preventDefault()
 
-        if (!email) {
+        if (!email || !email.trim()) {
             toast.error('请输入接收卡密的邮箱')
+            return
+        }
+
+        // 邮箱格式验证
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+        if (!emailRegex.test(email.trim())) {
+            toast.error('请输入正确的邮箱格式')
             return
         }
 
@@ -185,6 +194,9 @@ function Checkout() {
                             onChange={(e) => setEmail(e.target.value)}
                             required
                         />
+                        {email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && (
+                            <p style={{ color: '#ef4444', fontSize: '12px', marginTop: '6px' }}>请输入正确的邮箱格式</p>
+                        )}
                     </div>
 
                     {/* 支付方式 */}
@@ -264,7 +276,7 @@ function Checkout() {
                                 checked={agreed}
                                 onChange={(e) => setAgreed(e.target.checked)}
                             />
-                            <span>我已阅读并同意 <a href="#">购买协议</a> 和 <a href="#">退款政策</a></span>
+                            <span>我已阅读并同意 <a href="/terms" target="_blank" rel="noopener noreferrer">购买协议</a> 和 <a href="/refund-policy" target="_blank" rel="noopener noreferrer">退款政策</a></span>
                         </label>
 
                         <button

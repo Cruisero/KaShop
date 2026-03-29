@@ -8,7 +8,8 @@ const alipayService = require('../services/alipayService')
 const defaultPaymentMethods = [
     { id: 'alipay', name: '支付宝', icon: 'alipay', settingKey: 'alipayEnabled' },
     { id: 'wechat', name: '微信支付', icon: 'wechat', settingKey: 'wechatEnabled' },
-    { id: 'usdt', name: 'USDT-TRC20', icon: 'usdt', settingKey: 'usdtEnabled' }
+    { id: 'usdt', name: 'USDT-TRC20', icon: 'usdt', settingKey: 'usdtEnabled' },
+    { id: 'bsc_usdt', name: 'USDT-BEP20', icon: 'bsc_usdt', settingKey: 'bscUsdtEnabled' }
 ]
 
 // 获取支付方式列表（从数据库读取启用状态）
@@ -18,7 +19,7 @@ exports.getPaymentMethods = async (req, res, next) => {
         const settings = await prisma.setting.findMany({
             where: {
                 key: {
-                    in: ['alipayEnabled', 'wechatEnabled', 'usdtEnabled']
+                    in: ['alipayEnabled', 'wechatEnabled', 'usdtEnabled', 'bscUsdtEnabled']
                 }
             }
         })
@@ -46,6 +47,18 @@ exports.getPaymentMethods = async (req, res, next) => {
 exports.createPayment = async (req, res, next) => {
     try {
         const { orderNo, paymentMethod } = req.body
+
+        // 【安全修复】校验支付方式是否启用
+        const methodConfig = defaultPaymentMethods.find(m => m.id === paymentMethod)
+        if (methodConfig) {
+            const setting = await prisma.setting.findFirst({
+                where: { key: methodConfig.settingKey }
+            })
+            if (!setting || setting.value !== 'true') {
+                logger.warn(`拒绝未启用的支付方式: ${paymentMethod}`)
+                return res.status(400).json({ error: '该支付方式未启用' })
+            }
+        }
 
         // 查询订单
         const order = await prisma.order.findUnique({
@@ -97,6 +110,16 @@ exports.createPayment = async (req, res, next) => {
             const usdtInfo = await usdtService.createUsdtPayment(order)
             paymentData = {
                 paymentType: 'usdt',
+                walletAddress: usdtInfo.walletAddress,
+                usdtAmount: usdtInfo.usdtAmount,
+                qrContent: usdtInfo.qrContent,
+                exchangeRate: usdtInfo.exchangeRate
+            }
+        } else if (paymentMethod === 'bsc_usdt') {
+            const bscUsdtService = require('../services/bscUsdtService')
+            const usdtInfo = await bscUsdtService.createBscUsdtPayment(order)
+            paymentData = {
+                paymentType: 'bsc_usdt',
                 walletAddress: usdtInfo.walletAddress,
                 usdtAmount: usdtInfo.usdtAmount,
                 qrContent: usdtInfo.qrContent,
@@ -193,13 +216,9 @@ exports.wechatCallback = async (req, res, next) => {
     try {
         const { out_trade_no, transaction_id, result_code } = req.body
 
-        logger.info('微信回调:', { out_trade_no, transaction_id, result_code })
-
-        if (result_code === 'SUCCESS') {
-            await processPaymentSuccess(out_trade_no, transaction_id, 'wechat')
-        }
-
-        res.json({ code: 'SUCCESS', message: '成功' })
+        // 【安全修复】微信支付未配置SDK，拒绝所有回调（无法验签）
+        logger.warn('收到微信回调但微信支付未配置，拒绝处理:', { out_trade_no, transaction_id, result_code })
+        return res.json({ code: 'FAIL', message: '微信支付未配置' })
     } catch (error) {
         logger.error('微信回调处理失败:', error)
         res.json({ code: 'FAIL', message: error.message })
@@ -274,11 +293,18 @@ async function processPaymentSuccess(orderNo, tradeNo, paymentMethod) {
             // 发送邮件通知
             await emailService.sendOrderCompletedEmail(fullOrder, fullOrder.cards)
             logger.info(`订单 ${orderNo} 邮件通知已发送`)
+
+            // 通知管理员
+            const { notifyOrderPaid } = require('../services/adminNotifyService')
+            notifyOrderPaid(fullOrder).catch(e => logger.error('管理员通知失败:', e))
         } catch (error) {
             logger.error(`订单 ${orderNo} 邮件发送失败:`, error)
         }
     } else {
         logger.info(`订单 ${orderNo} 无卡密，等待管理员手动发货后发送邮件`)
+        // 通知管理员需要手动发货
+        const { notifyPendingShip } = require('../services/adminNotifyService')
+        notifyPendingShip(order).catch(e => logger.error('管理员通知失败:', e))
     }
 }
 
@@ -353,9 +379,15 @@ exports.mockPayment = async (req, res, next) => {
     }
 }
 
-// 确认模拟支付
+// 确认模拟支付 - 仅开发环境可用
 exports.confirmMockPayment = async (req, res, next) => {
     try {
+        // 【安全修复】生产环境禁止使用模拟支付
+        if (process.env.NODE_ENV === 'production') {
+            logger.warn('生产环境拒绝模拟支付请求:', { orderNo: req.body.orderNo, ip: req.ip })
+            return res.status(403).json({ error: '模拟支付在生产环境中不可用' })
+        }
+
         const { orderNo } = req.body
 
         await processPaymentSuccess(orderNo, `MOCK${Date.now()}`, 'mock')

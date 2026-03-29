@@ -18,10 +18,10 @@ router.post('/callback/wechat', paymentController.wechatCallback)
 // 查询支付状态
 router.get('/status/:orderNo', paymentController.getPaymentStatus)
 
-// 模拟支付页面 (开发测试)
-router.get('/mock', paymentController.mockPayment)
-
-// 确认模拟支付
-router.post('/mock/confirm', paymentController.confirmMockPayment)
+// 模拟支付页面 (仅开发/测试环境)
+if (process.env.NODE_ENV !== 'production') {
+    router.get('/mock', paymentController.mockPayment)
+    router.post('/mock/confirm', paymentController.confirmMockPayment)
+}
 
 module.exports = router

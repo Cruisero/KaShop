@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom'
-import { FiUser, FiPackage, FiLock, FiLogOut, FiMail, FiCalendar, FiCopy, FiEye, FiEyeOff, FiMessageCircle, FiPlus, FiClock, FiCheck, FiAlertCircle } from 'react-icons/fi'
+import { FiUser, FiPackage, FiLock, FiLogOut, FiMail, FiCalendar, FiCopy, FiEye, FiEyeOff, FiMessageCircle, FiPlus, FiClock, FiCheck, FiAlertCircle, FiCheckCircle } from 'react-icons/fi'
 import { useAuthStore } from '../../store/authStore'
 import toast from 'react-hot-toast'
 import './User.css'
@@ -417,6 +417,7 @@ function PasswordPage() {
 const ticketStatusMap = {
     OPEN: { label: '待处理', class: 'open', icon: <FiAlertCircle /> },
     IN_PROGRESS: { label: '处理中', class: 'in-progress', icon: <FiClock /> },
+    COMPLETED: { label: '已完成', class: 'completed', icon: <FiCheckCircle /> },
     CLOSED: { label: '已关闭', class: 'closed', icon: <FiCheck /> }
 }
 
@@ -504,6 +505,12 @@ function TicketsPage() {
                     onClick={() => setFilter('IN_PROGRESS')}
                 >
                     处理中
+                </button>
+                <button
+                    className={`filter-btn ${filter === 'COMPLETED' ? 'active' : ''}`}
+                    onClick={() => setFilter('COMPLETED')}
+                >
+                    已完成
                 </button>
                 <button
                     className={`filter-btn ${filter === 'CLOSED' ? 'active' : ''}`}

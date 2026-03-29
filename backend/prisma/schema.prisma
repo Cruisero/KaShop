@@ -54,10 +54,14 @@ model Product {
   images          Json?
   status          Status           @default(ACTIVE)
   sortOrder       Int              @default(0) @map("sort_order")
+  weight          Int              @default(0)
+  viewCount       Int              @default(0) @map("view_count")
+  sortScore       Float            @default(0) @map("sort_score")
   createdAt       DateTime         @default(now()) @map("created_at")
   updatedAt       DateTime         @updatedAt @map("updated_at")
   fullDescription String?          @map("full_description") @db.Text
   tags            Json?
+  deliveryNote    String?          @map("delivery_note") @db.Text
   cards           Card[]
   orders          Order[]
   variants        ProductVariant[]
@@ -128,6 +132,7 @@ model Order {
   variantName   String?     @map("variant_name")
   cancelledAt   DateTime?   @map("cancelled_at")
   usdtAmount    Decimal?    @map("usdt_amount") @db.Decimal(10, 2)
+  bscUsdtAmount Decimal?    @map("bsc_usdt_amount") @db.Decimal(10, 2)
   remark        String?     @db.Text
   cards         Card[]
   product       Product     @relation(fields: [productId], references: [id])
@@ -208,6 +213,7 @@ enum TicketType {
 enum TicketStatus {
   OPEN          // 待处理
   IN_PROGRESS   // 处理中
+  COMPLETED     // 已完成
   CLOSED        // 已关闭
 }
 

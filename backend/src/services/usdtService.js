@@ -249,17 +249,28 @@ async function processUsdtPaymentSuccess(order, txHash, usdtAmount) {
         logger.error(`USDT订单 ${order.orderNo} 卡密发放失败:`, error)
     }
 
-    // 发送邮件通知
-    try {
-        const emailService = require('./emailService')
-        const fullOrder = await prisma.order.findUnique({
-            where: { id: order.id },
-            include: { product: true, cards: true }
-        })
-        await emailService.sendOrderCompletedEmail(fullOrder, fullOrder.cards)
-        logger.info(`USDT订单 ${order.orderNo} 邮件通知已发送`)
-    } catch (error) {
-        logger.error(`USDT订单 ${order.orderNo} 邮件发送失败:`, error)
+    // 只有成功发放卡密时才发送完成邮件
+    if (cards && cards.length > 0) {
+        try {
+            const emailService = require('./emailService')
+            const fullOrder = await prisma.order.findUnique({
+                where: { id: order.id },
+                include: { product: true, cards: true }
+            })
+            await emailService.sendOrderCompletedEmail(fullOrder, fullOrder.cards)
+            logger.info(`USDT订单 ${order.orderNo} 邮件通知已发送`)
+
+            // 通知管理员
+            const { notifyOrderPaid } = require('./adminNotifyService')
+            notifyOrderPaid(fullOrder).catch(e => logger.error('管理员通知失败:', e))
+        } catch (error) {
+            logger.error(`USDT订单 ${order.orderNo} 邮件发送失败:`, error)
+        }
+    } else {
+        logger.info(`USDT订单 ${order.orderNo} 无卡密，等待管理员手动发货后发送邮件`)
+        // 通知管理员需要手动发货
+        const { notifyPendingShip } = require('./adminNotifyService')
+        notifyPendingShip(order).catch(e => logger.error('管理员通知失败:', e))
     }
 }
 

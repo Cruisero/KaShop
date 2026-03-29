@@ -116,7 +116,7 @@ exports.getProducts = async (req, res, next) => {
 // 商品管理 - 创建
 exports.createProduct = async (req, res, next) => {
     try {
-        const { name, description, fullDescription, price, originalPrice, categoryId, image, images, tags, stock, variants } = req.body
+        const { name, description, fullDescription, price, originalPrice, categoryId, image, images, tags, stock, variants, weight, deliveryNote } = req.body
 
         // 构建数据对象，只包含有值的字段
         const productData = {
@@ -129,6 +129,8 @@ exports.createProduct = async (req, res, next) => {
             images: images || [],
             stock: stock || 0,
             tags: tags || [],
+            weight: parseInt(weight) || 0,
+            deliveryNote: deliveryNote || null,
             status: 'ACTIVE'
         }
 
@@ -189,7 +191,7 @@ exports.createProduct = async (req, res, next) => {
 exports.updateProduct = async (req, res, next) => {
     try {
         const { id } = req.params
-        const { name, description, fullDescription, price, originalPrice, categoryId, image, images, tags, status, stock, variants } = req.body
+        const { name, description, fullDescription, price, originalPrice, categoryId, image, images, tags, status, stock, variants, weight, deliveryNote } = req.body
 
         // 构建更新数据对象
         const updateData = {
@@ -202,6 +204,8 @@ exports.updateProduct = async (req, res, next) => {
             images: images || [],
             stock,
             tags,
+            weight: weight !== undefined ? parseInt(weight) || 0 : undefined,
+            deliveryNote: deliveryNote !== undefined ? (deliveryNote || null) : undefined,
             status: status?.toUpperCase()
         }
 
@@ -220,31 +224,92 @@ exports.updateProduct = async (req, res, next) => {
                 data: updateData
             })
 
-            // 如果传入了 variants 数组，先删除旧规格再创建新规格
+            // 如果传入了 variants 数组，使用 upsert 策略保留已有规格 ID
             if (variants !== undefined) {
-                // 删除旧规格
-                await tx.productVariant.deleteMany({
+                // 获取当前数据库中的旧规格
+                const existingVariants = await tx.productVariant.findMany({
                     where: { productId: id }
                 })
 
-                // 创建新规格，并自动设置商品价格
                 if (variants && variants.length > 0) {
                     const validVariants = variants.filter(v => v.name && v.price)
+
                     if (validVariants.length > 0) {
-                        // 商品价格自动取最低规格价格
+                        // 构建匹配 key: name + type
+                        const makeKey = (name, type) => `${(type || '').trim()}::${(name || '').trim()}`
+
+                        // 将旧规格按 key 索引
+                        const existingMap = new Map()
+                        for (const ev of existingVariants) {
+                            existingMap.set(makeKey(ev.name, ev.type), ev)
+                        }
+
+                        const matchedExistingIds = new Set()
+
+                        // 逐个处理传入的规格：匹配则更新，不匹配则新建
+                        for (let i = 0; i < validVariants.length; i++) {
+                            const v = validVariants[i]
+                            const key = makeKey(v.name, v.type)
+                            const existing = existingMap.get(key)
+
+                            if (existing) {
+                                // 更新已有规格（保留 ID）
+                                matchedExistingIds.add(existing.id)
+                                await tx.productVariant.update({
+                                    where: { id: existing.id },
+                                    data: {
+                                        price: parseFloat(v.price) || 0,
+                                        originalPrice: v.originalPrice ? parseFloat(v.originalPrice) : null,
+                                        stock: parseInt(v.stock) || 0,
+                                        sortOrder: i,
+                                        status: 'ACTIVE'
+                                    }
+                                })
+                            } else {
+                                // 新建规格
+                                await tx.productVariant.create({
+                                    data: {
+                                        productId: id,
+                                        type: v.type || null,
+                                        name: v.name,
+                                        price: parseFloat(v.price) || 0,
+                                        originalPrice: v.originalPrice ? parseFloat(v.originalPrice) : null,
+                                        stock: parseInt(v.stock) || 0,
+                                        sortOrder: i,
+                                        status: 'ACTIVE'
+                                    }
+                                })
+                            }
+                        }
+
+                        // 找出需要删除的旧规格（不在新列表中的）
+                        const toDeleteIds = existingVariants
+                            .filter(ev => !matchedExistingIds.has(ev.id))
+                            .map(ev => ev.id)
+
+                        if (toDeleteIds.length > 0) {
+                            // 先将引用这些规格的卡密的 variantId 置空，避免外键孤立
+                            await tx.card.updateMany({
+                                where: { variantId: { in: toDeleteIds } },
+                                data: { variantId: null }
+                            })
+                            // 再删除旧规格
+                            await tx.productVariant.deleteMany({
+                                where: { id: { in: toDeleteIds } }
+                            })
+                        }
+
+                        // 更新商品价格和库存
                         const prices = validVariants.map(v => parseFloat(v.price) || 0)
                         const minPrice = Math.min(...prices)
 
-                        // 原价取最高规格原价（如果有）
                         const originalPrices = validVariants
                             .map(v => v.originalPrice ? parseFloat(v.originalPrice) : 0)
                             .filter(p => p > 0)
                         const maxOriginalPrice = originalPrices.length > 0 ? Math.max(...originalPrices) : null
 
-                        // 库存为各规格库存之和
                         const totalStock = validVariants.reduce((sum, v) => sum + (parseInt(v.stock) || 0), 0)
 
-                        // 更新商品价格和库存
                         await tx.product.update({
                             where: { id },
                             data: {
@@ -253,18 +318,17 @@ exports.updateProduct = async (req, res, next) => {
                                 stock: totalStock
                             }
                         })
-
-                        await tx.productVariant.createMany({
-                            data: validVariants.map((v, index) => ({
-                                productId: id,
-                                type: v.type || null,
-                                name: v.name,
-                                price: parseFloat(v.price) || 0,
-                                originalPrice: v.originalPrice ? parseFloat(v.originalPrice) : null,
-                                stock: parseInt(v.stock) || 0,
-                                sortOrder: index,
-                                status: 'ACTIVE'
-                            }))
+                    }
+                } else {
+                    // variants 为空数组，删除所有规格，但先清理卡密引用
+                    if (existingVariants.length > 0) {
+                        const allVariantIds = existingVariants.map(ev => ev.id)
+                        await tx.card.updateMany({
+                            where: { variantId: { in: allVariantIds } },
+                            data: { variantId: null }
+                        })
+                        await tx.productVariant.deleteMany({
+                            where: { productId: id }
                         })
                     }
                 }
@@ -456,11 +520,24 @@ exports.shipOrder = async (req, res, next) => {
         // 如果手动输入了卡密，创建卡密记录并关联到订单
         let newCards = []
         if (hasManualInput) {
-            // 按行分割卡密（支持多个卡密）
-            const cardLines = cardContent.split('\n')
-                .map(line => line.trim())
-                .filter(line => line.length > 0)
-                .slice(0, order.quantity)  // 最多创建订单数量的卡密
+            // 解析卡密内容
+            let cardLines = []
+            if (order.quantity === 1) {
+                // 单个卡密：整段内容作为一个卡密（支持多行长卡密）
+                cardLines = [cardContent.trim()]
+            } else if (cardContent.includes('\n---\n') || cardContent.startsWith('---\n') || cardContent.endsWith('\n---')) {
+                // 多个卡密且使用 --- 分隔：支持每个卡密包含多行内容
+                cardLines = cardContent.split(/\n---\n|\n---$|^---\n/)
+                    .map(c => c.trim())
+                    .filter(c => c.length > 0)
+                    .slice(0, order.quantity)
+            } else {
+                // 多个卡密，按行分割（向后兼容）
+                cardLines = cardContent.split('\n')
+                    .map(line => line.trim())
+                    .filter(line => line.length > 0)
+                    .slice(0, order.quantity)
+            }
 
             if (cardLines.length > 0) {
                 // 创建卡密记录
@@ -510,6 +587,92 @@ exports.shipOrder = async (req, res, next) => {
                 completedAt: updatedOrder.completedAt
             },
             cardsAdded: newCards.length,
+            emailSent
+        })
+    } catch (error) {
+        next(error)
+    }
+}
+
+// 订单管理 - 补发卡密（已完成订单追加卡密并重发邮件）
+exports.resendCards = async (req, res, next) => {
+    try {
+        const { id } = req.params
+        const { cardContent } = req.body
+        const emailService = require('../services/emailService')
+
+        if (!cardContent || !cardContent.trim()) {
+            return res.status(400).json({ error: '请输入补发的卡密内容' })
+        }
+
+        // 获取订单
+        const order = await prisma.order.findUnique({
+            where: { id },
+            include: { product: true, cards: true }
+        })
+
+        if (!order) {
+            return res.status(404).json({ error: '订单不存在' })
+        }
+
+        if (order.status !== 'COMPLETED' && order.status !== 'PAID') {
+            return res.status(400).json({ error: '只有已支付或已完成的订单才能补发' })
+        }
+
+        // 解析卡密内容（复用发货的解析逻辑）
+        let cardLines = []
+        if (cardContent.includes('\n---\n') || cardContent.startsWith('---\n') || cardContent.endsWith('\n---')) {
+            cardLines = cardContent.split(/\n---\n|\n---$|^---\n/)
+                .map(c => c.trim())
+                .filter(c => c.length > 0)
+        } else {
+            // 补发不限制数量，按行或整段
+            cardLines = [cardContent.trim()]
+        }
+
+        // 创建新的卡密记录
+        const newCards = []
+        for (const content of cardLines) {
+            const card = await prisma.card.create({
+                data: {
+                    productId: order.productId,
+                    variantId: order.variantId || null,
+                    content: content,
+                    status: 'SOLD',
+                    orderId: order.id,
+                    soldAt: new Date()
+                }
+            })
+            newCards.push(card)
+        }
+
+        // 如果订单还是 PAID 状态，更新为 COMPLETED
+        if (order.status === 'PAID') {
+            await prisma.order.update({
+                where: { id },
+                data: { status: 'COMPLETED', completedAt: new Date() }
+            })
+        }
+
+        // 重新获取包含所有卡密的订单
+        const fullOrder = await prisma.order.findUnique({
+            where: { id },
+            include: { product: true, cards: true }
+        })
+
+        // 重新发送邮件（包含所有卡密）
+        let emailSent = false
+        try {
+            await emailService.sendOrderCompletedEmail(fullOrder, fullOrder.cards)
+            emailSent = true
+        } catch (emailError) {
+            console.error('补发邮件发送失败:', emailError)
+        }
+
+        res.json({
+            message: emailSent ? '补发成功，邮件已发送' : '补发成功，但邮件发送失败',
+            cardsAdded: newCards.length,
+            totalCards: fullOrder.cards.length,
             emailSent
         })
     } catch (error) {
@@ -570,6 +733,17 @@ exports.updateSettings = async (req, res, next) => {
                 where: { key },
                 create: { key, value },
                 update: { value }
+            })
+        }
+
+        // 检查是否更新了备份相关的设置，如果是，则重启备份调度
+        const backupKeys = ['backupEnabled', 'backupFrequency', 'backupRetentionDays', 'backupEmailEnabled', 'backupEmail']
+        const hasBackupUpdate = Object.keys(settings).some(key => backupKeys.includes(key))
+        
+        if (hasBackupUpdate) {
+            const backupService = require('../services/backupService')
+            backupService.startBackupSchedule().catch(err => {
+                console.error('重启备份服务失败:', err)
             })
         }
 
@@ -792,6 +966,49 @@ exports.cleanupUnverifiedAccounts = async (req, res, next) => {
             deleted: result.deleted,
             users: result.users || []
         })
+    } catch (error) {
+        next(error)
+    }
+}
+
+// ==================== 数据库备份 ====================
+
+// 获取备份状态
+exports.getBackupStatus = async (req, res, next) => {
+    try {
+        const backupService = require('../services/backupService')
+        const status = backupService.getBackupStatus()
+        const settings = await backupService.getBackupSettings()
+        res.json({ ...status, settings })
+    } catch (error) {
+        next(error)
+    }
+}
+
+// 手动执行备份
+exports.runBackup = async (req, res, next) => {
+    try {
+        const backupService = require('../services/backupService')
+        // 手动触发备份，forceEmail=true: 只要配置了邮箱就推送
+        const result = await backupService.runBackup(true)
+        if (result) {
+            const msg = result.emailSent ? '备份完成，已推送至邮箱' : '备份完成'
+            res.json({ success: true, message: msg, emailSent: !!result.emailSent, ...result })
+        } else {
+            res.status(500).json({ success: false, error: '备份失败，请查看服务器日志' })
+        }
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message || '备份失败' })
+    }
+}
+
+// 重启备份定时任务（设置更新后调用）
+exports.restartBackupSchedule = async (req, res, next) => {
+    try {
+        const backupService = require('../services/backupService')
+        await backupService.startBackupSchedule()
+        const settings = await backupService.getBackupSettings()
+        res.json({ success: true, message: '备份计划已更新', settings })
     } catch (error) {
         next(error)
     }

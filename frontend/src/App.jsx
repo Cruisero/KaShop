@@ -20,6 +20,9 @@ import ResetPassword from './pages/Auth/ResetPassword'
 import NotFound from './pages/NotFound'
 import TicketNew from './pages/TicketNew'
 import TicketDetail from './pages/TicketDetail'
+import Terms from './pages/Terms'
+import RefundPolicy from './pages/RefundPolicy'
+import OrderQuery from './pages/OrderQuery'
 import { useThemeStore } from './store/themeStore'
 import { useAuthStore } from './store/authStore'
 
@@ -156,6 +159,9 @@ function App() {
                         <Route path="/search" element={<Search />} />
                         <Route path="/tickets/new" element={<TicketNew />} />
                         <Route path="/tickets/:id" element={<TicketDetail />} />
+                        <Route path="/terms" element={<Terms />} />
+                        <Route path="/refund-policy" element={<RefundPolicy />} />
+                        <Route path="/order-query" element={<OrderQuery />} />
                         <Route path="*" element={<NotFound />} />
                     </Routes>
                 </main>

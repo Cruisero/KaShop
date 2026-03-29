@@ -41,13 +41,15 @@ function OrderResult() {
                         quantity: orderData.quantity,
                         totalAmount: parseFloat(orderData.totalAmount) || 0,
                         paymentMethod: orderData.paymentMethod === 'alipay' ? '支付宝' :
-                            orderData.paymentMethod === 'wechat' ? '微信支付' : orderData.paymentMethod,
+                            orderData.paymentMethod === 'wechat' ? '微信支付' :
+                                orderData.paymentMethod === 'bsc_usdt' ? 'USDT-BEP20' : orderData.paymentMethod,
                         createdAt: orderData.createdAt ? new Date(orderData.createdAt).toLocaleString() : '',
                         paidAt: orderData.paidAt ? new Date(orderData.paidAt).toLocaleString() : null,
                         cards: (orderData.cards || []).map((c, idx) => ({
                             id: idx + 1,
                             content: c.content || c
-                        }))
+                        })),
+                        deliveryNote: orderData.deliveryNote || null
                     })
                 }
             } catch (error) {
@@ -114,8 +116,13 @@ function OrderResult() {
 
     // 轮询支付状态 - 当显示二维码或USDT支付时启动
     useEffect(() => {
+        // 判断是否是 USDT/BSC_USDT 待支付订单（即使页面刷新也要继续轮询）
+        const isUsdtPending = order?.status === 'pending' &&
+            (order?.paymentMethod === 'USDT-TRC20' || order?.paymentMethod === 'USDT-BEP20' ||
+                order?.paymentMethod === 'usdt' || order?.paymentMethod === 'bsc_usdt')
+
         // 只有显示支付信息并且订单状态为待支付时才轮询
-        if ((!qrCodeUrl && !usdtPayment) || order?.status !== 'pending') {
+        if ((!qrCodeUrl && !usdtPayment && !isUsdtPending) || order?.status !== 'pending') {
             return
         }
 
@@ -135,7 +142,7 @@ function OrderResult() {
         }, 3000) // 每3秒检查一次
 
         return () => clearInterval(interval)
-    }, [qrCodeUrl, order?.orderNo, order?.status])
+    }, [qrCodeUrl, usdtPayment, order?.orderNo, order?.status, order?.paymentMethod])
 
     // 订单待支付时自动生成二维码
     useEffect(() => {
@@ -154,6 +161,8 @@ function OrderResult() {
                 paymentMethod = 'wechat'
             } else if (order.paymentMethod === 'USDT-TRC20' || order.paymentMethod === 'usdt') {
                 paymentMethod = 'usdt'
+            } else if (order.paymentMethod === 'USDT-BEP20' || order.paymentMethod === 'bsc_usdt') {
+                paymentMethod = 'bsc_usdt'
             }
 
             const res = await fetch('/api/payment/create', {
@@ -166,9 +175,10 @@ function OrderResult() {
             })
             const data = await res.json()
 
-            if (data.paymentType === 'usdt') {
-                // USDT支付
+            if (data.paymentType === 'usdt' || data.paymentType === 'bsc_usdt') {
+                // USDT/BSC USDT支付
                 setUsdtPayment({
+                    type: data.paymentType,
                     walletAddress: data.walletAddress,
                     usdtAmount: data.usdtAmount,
                     qrContent: data.qrContent,
@@ -316,6 +326,19 @@ function OrderResult() {
                     </div>
                 )}
 
+                {/* 发货备注 */}
+                {(order.status === 'completed' || order.status === 'paid') && order.deliveryNote && (
+                    <div className="order-section delivery-note-section">
+                        <div className="delivery-note-card">
+                            <div className="delivery-note-icon">📋</div>
+                            <div className="delivery-note-content">
+                                <h4>商家提示</h4>
+                                <p>{order.deliveryNote}</p>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {/* 已完成但没有卡密（卡密发放中） */}
                 {(order.status === 'completed' || order.status === 'paid') && order.cards.length === 0 && (
                     <div className="order-section cards-pending-section">
@@ -335,7 +358,7 @@ function OrderResult() {
                         {usdtPayment ? (
                             /* USDT支付区域 */
                             <div className="usdt-payment-section">
-                                <h4>💎 USDT-TRC20 支付</h4>
+                                <h4>{usdtPayment.type === 'bsc_usdt' ? '🟡 USDT-BEP20 支付' : '💎 USDT-TRC20 支付'}</h4>
 
                                 <div className="usdt-amount-display">
                                     <span className="amount-label">请转账</span>
@@ -349,7 +372,7 @@ function OrderResult() {
                                 </div>
 
                                 <div className="usdt-address-section">
-                                    <label>收款地址 (TRC20)</label>
+                                    <label>收款地址 ({usdtPayment.type === 'bsc_usdt' ? 'BEP20/BSC智能链' : 'TRC20/波场链'})</label>
                                     <div className="address-box">
                                         <code>{usdtPayment.walletAddress}</code>
                                         <button

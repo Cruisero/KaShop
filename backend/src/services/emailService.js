@@ -429,6 +429,7 @@ const sendTicketReplyNotification = async (email, username, ticketNo, subject, r
 
 module.exports = {
     getEmailConfig,
+    createTransporter,
     sendOrderCompletedEmail,
     sendVerificationEmail,
     sendPasswordResetEmail,

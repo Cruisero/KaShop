@@ -9,7 +9,7 @@ exports.getProducts = async (req, res, next) => {
             categoryId,
             search,
             status = 'ACTIVE',
-            sort = 'createdAt',
+            sort = 'sortScore',
             order = 'desc',
             page = 1,
             pageSize = 20
@@ -64,6 +64,8 @@ exports.getProducts = async (req, res, next) => {
             orderBy.price = order
         } else if (sort === 'sales') {
             orderBy.soldCount = order
+        } else if (sort === 'sortScore') {
+            orderBy.sortScore = 'desc'
         } else {
             orderBy.createdAt = order
         }
@@ -111,7 +113,7 @@ exports.getHotProducts = async (req, res, next) => {
 
         const products = await prisma.product.findMany({
             where: { status: 'ACTIVE' },
-            orderBy: { soldCount: 'desc' },
+            orderBy: { sortScore: 'desc' },
             take: parseInt(limit),
             include: {
                 category: {
@@ -158,6 +160,12 @@ exports.getProductById = async (req, res, next) => {
         if (!product) {
             return res.status(404).json({ error: '商品不存在' })
         }
+
+        // 异步增加浏览量（不阻塞响应）
+        prisma.product.update({
+            where: { id },
+            data: { viewCount: { increment: 1 } }
+        }).catch(() => { })
 
         // 查询库存计算模式设置
         const stockModeSetting = await prisma.setting.findUnique({

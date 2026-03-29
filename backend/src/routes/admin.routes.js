@@ -25,6 +25,7 @@ router.delete('/categories/:id', adminController.deleteCategory)
 router.get('/orders', adminController.getOrders)
 router.put('/orders/:id/status', adminController.updateOrderStatus)
 router.post('/orders/:id/ship', adminController.shipOrder)
+router.post('/orders/:id/resend', adminController.resendCards)
 
 // 用户管理
 router.get('/users', adminController.getUsers)
@@ -41,5 +42,10 @@ router.post('/cards/import', adminController.importCards)
 router.put('/cards/:id', adminController.updateCard)
 router.delete('/cards/:id', adminController.deleteCard)
 router.post('/cards/batch-delete', adminController.deleteCards)
+
+// 数据库备份
+router.get('/backup/status', adminController.getBackupStatus)
+router.post('/backup/run', adminController.runBackup)
+router.post('/backup/restart-schedule', adminController.restartBackupSchedule)
 
 module.exports = router

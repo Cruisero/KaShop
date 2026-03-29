@@ -367,6 +367,7 @@ function ProductsManage() {
         categoryId: '',
         images: [],
         tags: '',
+        weight: 0,
         variants: [], // 商品规格
         status: 'active'
     })
@@ -486,8 +487,10 @@ function ProductsManage() {
             categoryId: '',
             images: [],
             tags: '',
+            weight: 0,
             variants: [],
-            status: 'active'
+            status: 'active',
+            deliveryNote: ''
         })
         fetchCategories()
         setShowModal(true)
@@ -507,6 +510,7 @@ function ProductsManage() {
             categoryId: product.categoryId || '',
             images: product.images || [],
             tags: (product.tags || []).join(', '),
+            weight: product.weight || 0,
             variants: (product.variants || []).map(v => ({
                 type: v.type || '',
                 name: v.name,
@@ -516,7 +520,8 @@ function ProductsManage() {
             })),
             // 自动检测是否启用规格类型分组（如果有任何规格带 type 则启用）
             enableVariantTypes: (product.variants || []).some(v => v.type && v.type.trim() !== ''),
-            status: product.status
+            status: product.status?.toLowerCase() || 'active',
+            deliveryNote: product.deliveryNote || ''
         })
         fetchCategories()
         setShowModal(true)
@@ -566,8 +571,10 @@ function ProductsManage() {
             image: imagePaths[0] || null,
             images: imagePaths,
             tags: formData.tags ? formData.tags.split(',').map(t => t.trim()).filter(t => t) : [],
+            weight: parseInt(formData.weight) || 0,
             variants: formData.variants.filter(v => v.name && v.price),
-            status: formData.status?.toUpperCase() || 'ACTIVE'
+            status: formData.status?.toUpperCase() || 'ACTIVE',
+            deliveryNote: formData.deliveryNote || ''
         }
 
         // 只有选择了分类才包含 categoryId
@@ -727,21 +734,49 @@ function ProductsManage() {
                             <th>价格</th>
                             <th>库存</th>
                             <th>已售</th>
+                            <th>权重</th>
+                            <th>评分</th>
                             <th>状态</th>
                             <th>操作</th>
                         </tr>
                     </thead>
                     <tbody>
                         {loading ? (
-                            <tr><td colSpan="6" style={{ textAlign: 'center', padding: '40px' }}>加载中...</td></tr>
+                            <tr><td colSpan="8" style={{ textAlign: 'center', padding: '40px' }}>加载中...</td></tr>
                         ) : products.length === 0 ? (
-                            <tr><td colSpan="6" style={{ textAlign: 'center', padding: '40px' }}>暂无商品</td></tr>
+                            <tr><td colSpan="8" style={{ textAlign: 'center', padding: '40px' }}>暂无商品</td></tr>
                         ) : products.map(product => (
                             <tr key={product.id}>
                                 <td>{product.name}</td>
                                 <td>¥{parseFloat(product.price).toFixed(2)}</td>
                                 <td>{product.stock}</td>
                                 <td>{product.soldCount || 0}</td>
+                                <td>
+                                    <span style={{
+                                        display: 'inline-block',
+                                        padding: '2px 8px',
+                                        borderRadius: '10px',
+                                        fontSize: '0.8rem',
+                                        fontWeight: 500,
+                                        background: product.weight > 50 ? 'rgba(255,107,53,0.12)' : product.weight > 0 ? 'rgba(59,130,246,0.1)' : 'rgba(148,163,184,0.1)',
+                                        color: product.weight > 50 ? '#ff6b35' : product.weight > 0 ? '#3b82f6' : '#94a3b8'
+                                    }}>{product.weight || 0}</span>
+                                </td>
+                                <td>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        <div style={{
+                                            width: '40px', height: '4px', borderRadius: '2px',
+                                            background: 'rgba(148,163,184,0.2)', overflow: 'hidden'
+                                        }}>
+                                            <div style={{
+                                                width: `${Math.min(100, (product.sortScore || 0))}%`,
+                                                height: '100%', borderRadius: '2px',
+                                                background: (product.sortScore || 0) > 50 ? '#22c55e' : (product.sortScore || 0) > 20 ? '#f59e0b' : '#94a3b8'
+                                            }} />
+                                        </div>
+                                        <span style={{ fontSize: '0.8rem', color: '#64748b' }}>{(product.sortScore || 0).toFixed(1)}</span>
+                                    </div>
+                                </td>
                                 <td>
                                     <span className={`status-badge ${product.status?.toLowerCase()}`}>
                                         {product.status === 'ACTIVE' ? '上架' : '下架'}
@@ -1125,6 +1160,29 @@ function ProductsManage() {
                                 />
                             </div>
                             <div className="form-group">
+                                <label>商品权重 <span style={{ color: '#999', fontWeight: 'normal' }}>(0-100，越高排名越靠前，默认为0)</span></label>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                    <input
+                                        type="range"
+                                        name="weight"
+                                        min="0"
+                                        max="100"
+                                        value={formData.weight}
+                                        onChange={handleChange}
+                                        style={{ flex: 1, cursor: 'pointer' }}
+                                    />
+                                    <input
+                                        type="number"
+                                        name="weight"
+                                        min="0"
+                                        max="100"
+                                        value={formData.weight}
+                                        onChange={handleChange}
+                                        style={{ width: '80px', textAlign: 'center', padding: '6px 8px' }}
+                                    />
+                                </div>
+                            </div>
+                            <div className="form-group">
                                 <label>商品图片 <span className="upload-count">({formData.images.length} 已上传, {pendingImages.length} 待上传)</span></label>
                                 <div className="image-upload-area multi">
                                     {/* 已上传的图片 */}
@@ -1199,6 +1257,17 @@ function ProductsManage() {
                                         )}
                                     </div>
                                 )}
+                            </div>
+                            <div className="form-group">
+                                <label>发货备注 <span style={{ color: '#999', fontWeight: 'normal' }}>(发货后显示在订单页面，留空则不显示)</span></label>
+                                <textarea
+                                    name="deliveryNote"
+                                    value={formData.deliveryNote}
+                                    onChange={handleChange}
+                                    placeholder="例如：请在浏览器无痕模式下登录，首次使用请修改密码..."
+                                    rows={3}
+                                    style={{ resize: 'vertical' }}
+                                />
                             </div>
                             <div className="form-group">
                                 <label>状态</label>
@@ -1319,27 +1388,37 @@ function OrdersManage() {
     const [loading, setLoading] = useState(true)
     const [statusFilter, setStatusFilter] = useState('all')
     const [shipping, setShipping] = useState(null) // 正在发货的订单ID
+    const [currentPage, setCurrentPage] = useState(1)
+    const [totalOrders, setTotalOrders] = useState(0)
+    const [totalPages, setTotalPages] = useState(1)
+    const pageSize = 20
 
     // 卡密输入弹窗状态
     const [showCardInputModal, setShowCardInputModal] = useState(false)
     const [cardInputOrder, setCardInputOrder] = useState(null)
     const [cardInputContent, setCardInputContent] = useState('')
+    const [isResendMode, setIsResendMode] = useState(false) // 补发模式
+
+    useEffect(() => {
+        setCurrentPage(1)
+    }, [statusFilter])
 
     useEffect(() => {
         fetchOrders()
-    }, [statusFilter])
+    }, [statusFilter, currentPage])
 
     const fetchOrders = async () => {
         setLoading(true)
         try {
-            const url = statusFilter === 'all'
-                ? '/api/admin/orders'
-                : `/api/admin/orders?status=${statusFilter}`
-            const res = await fetch(url, {
+            const params = new URLSearchParams({ page: currentPage, pageSize })
+            if (statusFilter !== 'all') params.append('status', statusFilter)
+            const res = await fetch(`/api/admin/orders?${params}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             })
             const data = await res.json()
-            setOrders(data.orders || data || [])
+            setOrders(data.orders || [])
+            setTotalOrders(data.total || 0)
+            setTotalPages(Math.ceil((data.total || 0) / pageSize))
         } catch (error) {
             console.error('获取订单失败:', error)
         } finally {
@@ -1387,12 +1466,51 @@ function OrdersManage() {
     const handleShip = (order) => {
         setCardInputOrder(order)
         setCardInputContent('')
+        setIsResendMode(false)
         setShowCardInputModal(true)
     }
 
     // 提交发货
     const handleSubmitShip = async () => {
         await doShip(cardInputOrder.id, cardInputContent || null)
+    }
+
+    // 点击补发按钮
+    const handleResend = (order) => {
+        setCardInputOrder(order)
+        setCardInputContent('')
+        setIsResendMode(true)
+        setShowCardInputModal(true)
+    }
+
+    // 提交补发
+    const handleSubmitResend = async () => {
+        setShipping(cardInputOrder.id)
+        try {
+            const res = await fetch(`/api/admin/orders/${cardInputOrder.id}/resend`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ cardContent: cardInputContent })
+            })
+            const data = await res.json()
+            if (res.ok) {
+                showToast(data.emailSent ? `补发成功（共${data.totalCards}个卡密），邮件已发送` : '补发成功，但邮件发送失败', data.emailSent ? 'success' : 'warning')
+                setShowCardInputModal(false)
+                setCardInputOrder(null)
+                setCardInputContent('')
+                setIsResendMode(false)
+                fetchOrders()
+            } else {
+                showToast(data.error || '补发失败', 'error')
+            }
+        } catch (error) {
+            showToast('补发失败', 'error')
+        } finally {
+            setShipping(null)
+        }
     }
 
     const formatTime = (dateStr) => {
@@ -1416,7 +1534,7 @@ function OrdersManage() {
             <div className="page-header">
                 <h2>订单管理</h2>
                 <div className="header-stats">
-                    <span className="stat-item">共 {orders.length} 条订单</span>
+                    <span className="stat-item">共 {totalOrders} 条订单</span>
                 </div>
                 <div className="filters">
                     <select
@@ -1477,7 +1595,15 @@ function OrdersManage() {
                                         {shipping === order.id ? '发货中...' : '发货'}
                                     </button>
                                 )}
-                                <button className="action-btn view">查看</button>
+                                {order.status?.toUpperCase() === 'COMPLETED' && (
+                                    <button
+                                        className="action-btn ship"
+                                        onClick={() => handleResend(order)}
+                                    >
+                                        补发
+                                    </button>
+                                )}
+                                <button className="action-btn view" onClick={() => window.open(`/order/${order.orderNo}`, '_blank')}>查看</button>
                             </td>
                         </tr>
                     ))}
@@ -1486,6 +1612,47 @@ function OrdersManage() {
                     )}
                 </tbody>
             </table>
+
+            {totalPages > 1 && (
+                <div className="pagination">
+                    <button
+                        disabled={currentPage <= 1}
+                        onClick={() => setCurrentPage(p => p - 1)}
+                    >
+                        ← 上一页
+                    </button>
+                    {(() => {
+                        const pages = []
+                        let start = Math.max(1, currentPage - 2)
+                        let end = Math.min(totalPages, currentPage + 2)
+                        if (start > 1) {
+                            pages.push(<button key={1} onClick={() => setCurrentPage(1)} style={1 === currentPage ? { background: 'linear-gradient(135deg, #ef4444, #dc2626)', color: 'white', borderColor: 'transparent' } : {}}>1</button>)
+                            if (start > 2) pages.push(<span key="ls">...</span>)
+                        }
+                        for (let i = start; i <= end; i++) {
+                            pages.push(
+                                <button key={i} onClick={() => setCurrentPage(i)}
+                                    style={i === currentPage ? { background: 'linear-gradient(135deg, #ef4444, #dc2626)', color: 'white', borderColor: 'transparent' } : {}}
+                                >{i}</button>
+                            )
+                        }
+                        if (end < totalPages) {
+                            if (end < totalPages - 1) pages.push(<span key="rs">...</span>)
+                            pages.push(<button key={totalPages} onClick={() => setCurrentPage(totalPages)} style={totalPages === currentPage ? { background: 'linear-gradient(135deg, #ef4444, #dc2626)', color: 'white', borderColor: 'transparent' } : {}}>{totalPages}</button>)
+                        }
+                        return pages
+                    })()}
+                    <button
+                        disabled={currentPage >= totalPages}
+                        onClick={() => setCurrentPage(p => p + 1)}
+                    >
+                        下一页 →
+                    </button>
+                    <span style={{ marginLeft: '8px', fontSize: '0.85rem', color: '#94a3b8' }}>
+                        第 {currentPage}/{totalPages} 页
+                    </span>
+                </div>
+            )}
 
             {/* 发货弹窗 - 优化UI */}
             {showCardInputModal && cardInputOrder && (
@@ -1497,7 +1664,7 @@ function OrdersManage() {
                                     <path d="M20 12v6a2 2 0 01-2 2H6a2 2 0 01-2-2v-6M12 3v12M8 7l4-4 4 4" />
                                 </svg>
                             </div>
-                            <h3>手动发货</h3>
+                            <h3>{isResendMode ? '补发卡密' : '手动发货'}</h3>
                             <p className="ship-modal-subtitle">订单 {cardInputOrder.orderNo}</p>
                             <button className="ship-modal-close" onClick={() => setShowCardInputModal(false)}>
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -1531,14 +1698,14 @@ function OrdersManage() {
                             <div className="card-input-section">
                                 <label className="card-input-label">
                                     <span className="card-icon">🎫</span>
-                                    卡密内容
-                                    <span className="card-hint">每行一个，最多 {cardInputOrder.quantity} 个</span>
+                                    {isResendMode ? '补发卡密内容' : '卡密内容'}
+                                    <span className="card-hint">{isResendMode ? '多个卡密用 --- 分隔' : (cardInputOrder.quantity === 1 ? '支持多行内容' : `用 --- 分隔多个卡密，最多 ${cardInputOrder.quantity} 个`)}</span>
                                 </label>
                                 <textarea
                                     className="card-input-textarea"
                                     value={cardInputContent}
                                     onChange={(e) => setCardInputContent(e.target.value)}
-                                    placeholder={`请输入卡密内容...\n每行一个卡密`}
+                                    placeholder={cardInputOrder.quantity === 1 ? '请输入卡密内容（支持多行）...' : `请输入卡密内容...\n多个卡密用 --- 分隔，例如：\n卡密1内容\n---\n卡密2内容`}
                                     rows={6}
                                     autoFocus
                                 />
@@ -1549,7 +1716,7 @@ function OrdersManage() {
                                     <circle cx="12" cy="12" r="10" />
                                     <path d="M12 16v-4M12 8h.01" />
                                 </svg>
-                                <span>发货后将自动发送邮件通知客户，邮件中包含卡密信息</span>
+                                <span>{isResendMode ? '补发后将重新发送邮件通知客户，包含所有卡密' : '发货后将自动发送邮件通知客户，邮件中包含卡密信息'}</span>
                             </div>
                         </div>
 
@@ -1562,7 +1729,7 @@ function OrdersManage() {
                             </button>
                             <button
                                 className="ship-btn ship-btn-confirm"
-                                onClick={handleSubmitShip}
+                                onClick={isResendMode ? handleSubmitResend : handleSubmitShip}
                                 disabled={shipping === cardInputOrder.id || !cardInputContent.trim()}
                             >
                                 {shipping === cardInputOrder.id ? (
@@ -1575,7 +1742,7 @@ function OrdersManage() {
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                             <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
                                         </svg>
-                                        确认发货
+                                        {isResendMode ? '确认补发' : '确认发货'}
                                     </>
                                 )}
                             </button>
@@ -1601,7 +1768,8 @@ function TicketsManage() {
     const statusMap = {
         OPEN: { label: '待处理', class: 'pending', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.1)' },
         IN_PROGRESS: { label: '处理中', class: 'processing', color: '#3b82f6', bg: 'rgba(59, 130, 246, 0.1)' },
-        CLOSED: { label: '已关闭', class: 'completed', color: '#10b981', bg: 'rgba(16, 185, 129, 0.1)' }
+        COMPLETED: { label: '已完成', class: 'done', color: '#10b981', bg: 'rgba(16, 185, 129, 0.1)' },
+        CLOSED: { label: '已关闭', class: 'completed', color: '#64748b', bg: 'rgba(100, 116, 139, 0.1)' }
     }
 
     const typeMap = {
@@ -1616,6 +1784,7 @@ function TicketsManage() {
         total: tickets.length,
         open: tickets.filter(t => t.status === 'OPEN').length,
         inProgress: tickets.filter(t => t.status === 'IN_PROGRESS').length,
+        completed: tickets.filter(t => t.status === 'COMPLETED').length,
         closed: tickets.filter(t => t.status === 'CLOSED').length
     }
 
@@ -1743,8 +1912,15 @@ function TicketsManage() {
                         <span className="stat-label">处理中</span>
                     </div>
                 </div>
-                <div className="ticket-stat-card" onClick={() => setStatusFilter('CLOSED')}>
+                <div className="ticket-stat-card" onClick={() => setStatusFilter('COMPLETED')}>
                     <div className="stat-icon completed"><FiCheckCircle /></div>
+                    <div className="stat-info">
+                        <span className="stat-value">{stats.completed}</span>
+                        <span className="stat-label">已完成</span>
+                    </div>
+                </div>
+                <div className="ticket-stat-card" onClick={() => setStatusFilter('CLOSED')}>
+                    <div className="stat-icon" style={{ background: 'rgba(100,116,139,0.1)', color: '#64748b' }}><FiCheck /></div>
                     <div className="stat-info">
                         <span className="stat-value">{stats.closed}</span>
                         <span className="stat-label">已关闭</span>
@@ -1764,6 +1940,7 @@ function TicketsManage() {
                         <option value="all">全部状态</option>
                         <option value="OPEN">待处理</option>
                         <option value="IN_PROGRESS">处理中</option>
+                        <option value="COMPLETED">已完成</option>
                         <option value="CLOSED">已关闭</option>
                     </select>
                 </div>
@@ -1878,6 +2055,7 @@ function TicketsManage() {
                                     >
                                         <option value="OPEN">待处理</option>
                                         <option value="IN_PROGRESS">处理中</option>
+                                        <option value="COMPLETED">已完成</option>
                                         <option value="CLOSED">已关闭</option>
                                     </select>
                                 </div>
@@ -2421,19 +2599,26 @@ function UsersManage() {
     const [loading, setLoading] = useState(true)
     const [searchTerm, setSearchTerm] = useState('')
     const [roleFilter, setRoleFilter] = useState('all')
+    const [currentPage, setCurrentPage] = useState(1)
+    const [totalUsers, setTotalUsers] = useState(0)
+    const [totalPages, setTotalPages] = useState(1)
+    const pageSize = 20
 
     useEffect(() => {
         fetchUsers()
-    }, [])
+    }, [currentPage])
 
     const fetchUsers = async () => {
         setLoading(true)
         try {
-            const res = await fetch('/api/admin/users', {
+            const params = new URLSearchParams({ page: currentPage, pageSize })
+            const res = await fetch(`/api/admin/users?${params}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             })
             const data = await res.json()
-            setUsers(data.users || data || [])
+            setUsers(data.users || [])
+            setTotalUsers(data.total || 0)
+            setTotalPages(Math.ceil((data.total || 0) / pageSize))
         } catch (error) {
             console.error('获取用户列表失败:', error)
             showToast('获取用户列表失败', 'error')
@@ -2501,7 +2686,7 @@ function UsersManage() {
             <div className="page-header">
                 <h2>用户管理</h2>
                 <div className="header-stats">
-                    <span className="stat-item">总用户: {users.length}</span>
+                    <span className="stat-item">总用户: {totalUsers}</span>
                     <span className="stat-item">管理员: {adminCount}</span>
                 </div>
             </div>
@@ -2584,12 +2769,329 @@ function UsersManage() {
                     </div>
                 )
             }
+
+            {totalPages > 1 && (
+                <div className="pagination">
+                    <button
+                        disabled={currentPage <= 1}
+                        onClick={() => setCurrentPage(p => p - 1)}
+                    >
+                        ← 上一页
+                    </button>
+                    {(() => {
+                        const pages = []
+                        let start = Math.max(1, currentPage - 2)
+                        let end = Math.min(totalPages, currentPage + 2)
+                        if (start > 1) {
+                            pages.push(<button key={1} onClick={() => setCurrentPage(1)} style={1 === currentPage ? { background: 'linear-gradient(135deg, #ef4444, #dc2626)', color: 'white', borderColor: 'transparent' } : {}}>1</button>)
+                            if (start > 2) pages.push(<span key="ls">...</span>)
+                        }
+                        for (let i = start; i <= end; i++) {
+                            pages.push(
+                                <button key={i} onClick={() => setCurrentPage(i)}
+                                    style={i === currentPage ? { background: 'linear-gradient(135deg, #ef4444, #dc2626)', color: 'white', borderColor: 'transparent' } : {}}
+                                >{i}</button>
+                            )
+                        }
+                        if (end < totalPages) {
+                            if (end < totalPages - 1) pages.push(<span key="rs">...</span>)
+                            pages.push(<button key={totalPages} onClick={() => setCurrentPage(totalPages)} style={totalPages === currentPage ? { background: 'linear-gradient(135deg, #ef4444, #dc2626)', color: 'white', borderColor: 'transparent' } : {}}>{totalPages}</button>)
+                        }
+                        return pages
+                    })()}
+                    <button
+                        disabled={currentPage >= totalPages}
+                        onClick={() => setCurrentPage(p => p + 1)}
+                    >
+                        下一页 →
+                    </button>
+                    <span style={{ marginLeft: '8px', fontSize: '0.85rem', color: '#94a3b8' }}>
+                        第 {currentPage}/{totalPages} 页
+                    </span>
+                </div>
+            )}
         </div >
     )
 }
 
 // 系统设置
 // 系统设置
+// 数据库备份设置子组件
+function BackupSettings({ token, settings, handleChange, showToast }) {
+    const [backupStatus, setBackupStatus] = useState(null)
+    const [running, setRunning] = useState(false)
+
+    useEffect(() => {
+        loadBackupStatus()
+    }, [])
+
+    const loadBackupStatus = async () => {
+        try {
+            const res = await fetch('/api/admin/backup/status', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            })
+            if (res.ok) {
+                const data = await res.json()
+                setBackupStatus(data)
+            }
+        } catch (e) {
+            console.error('获取备份状态失败:', e)
+        }
+    }
+
+    const handleManualBackup = async () => {
+        setRunning(true)
+        try {
+            const res = await fetch('/api/admin/backup/run', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            })
+            const data = await res.json()
+            if (data.success) {
+                const emailMsg = data.emailSent ? '，已推送至邮箱 📧' : ''
+                showToast(`备份完成: ${data.filename} (${data.sizeMB} MB)${emailMsg}`, 'success')
+                loadBackupStatus()
+            } else {
+                showToast(`备份失败: ${data.error}`, 'error')
+            }
+        } catch (e) {
+            showToast('备份请求失败', 'error')
+        } finally {
+            setRunning(false)
+        }
+    }
+
+    const handleRestartSchedule = async () => {
+        try {
+            const res = await fetch('/api/admin/backup/restart-schedule', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            })
+            if (res.ok) {
+                showToast('备份计划已更新', 'success')
+                loadBackupStatus()
+            }
+        } catch (e) {
+            showToast('更新备份计划失败', 'error')
+        }
+    }
+
+    const formatSize = (bytes) => {
+        if (!bytes) return '0 B'
+        if (bytes < 1024) return bytes + ' B'
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
+        return (bytes / (1024 * 1024)).toFixed(2) + ' MB'
+    }
+
+    return (
+        <div className="settings-section">
+            <h3>数据库备份</h3>
+
+
+
+            {/* 配置与操作区 - 双栏布局 */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+                {/* 左栏：备份配置 */}
+                <div style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.95), rgba(248,250,252,0.95))', borderRadius: '16px', padding: '24px', border: '1px solid #e2e8f0', boxShadow: '0 2px 12px rgba(0,0,0,0.04)' }}>
+                    <h4 style={{ margin: '0 0 24px', fontSize: '1rem', fontWeight: 700, color: '#1e293b', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <span style={{ width: '34px', height: '34px', background: 'linear-gradient(135deg, #059669, #10b981)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px' }}>⚙️</span>
+                        备份配置
+                    </h4>
+
+                    {/* 启用开关 */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 18px', background: settings.backupEnabled ? 'linear-gradient(135deg, rgba(16,185,129,0.08), rgba(5,150,105,0.04))' : 'rgba(248,250,252,0.8)', borderRadius: '14px', border: `1px solid ${settings.backupEnabled ? 'rgba(16,185,129,0.25)' : '#e2e8f0'}`, marginBottom: '16px', transition: 'all 0.2s' }}>
+                        <div>
+                            <div style={{ fontWeight: 600, fontSize: '0.9rem', color: '#1e293b' }}>💾 启用自动备份</div>
+                            <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '3px' }}>定时自动备份 MySQL 数据库</div>
+                        </div>
+                        <label className="toggle-switch">
+                            <input type="checkbox" checked={settings.backupEnabled} onChange={(e) => handleChange('backupEnabled', e.target.checked)} />
+                            <span className="toggle-slider"></span>
+                        </label>
+                    </div>
+
+                    {settings.backupEnabled && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                            {/* 频率 */}
+                            <div style={{ padding: '14px 18px', background: 'rgba(248,250,252,0.8)', borderRadius: '14px', border: '1px solid #e2e8f0' }}>
+                                <div style={{ fontWeight: 600, fontSize: '0.82rem', color: '#475569', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>🕐 备份频率</div>
+                                <select
+                                    value={settings.backupFrequency}
+                                    onChange={(e) => handleChange('backupFrequency', parseInt(e.target.value))}
+                                    style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #cbd5e1', background: 'white', fontSize: '0.88rem', color: '#334155', outline: 'none', cursor: 'pointer', appearance: 'auto' }}
+                                >
+                                    <option value={1}>每天 1 次（凌晨3点）</option>
+                                    <option value={2}>每天 2 次（每12小时）</option>
+                                    <option value={4}>每天 4 次（每6小时）</option>
+                                    <option value={6}>每天 6 次（每4小时）</option>
+                                    <option value={12}>每天 12 次（每2小时）</option>
+                                    <option value={24}>每天 24 次（每小时）</option>
+                                </select>
+                            </div>
+
+                            {/* 保留天数 */}
+                            <div style={{ padding: '14px 18px', background: 'rgba(248,250,252,0.8)', borderRadius: '14px', border: '1px solid #e2e8f0' }}>
+                                <div style={{ fontWeight: 600, fontSize: '0.82rem', color: '#475569', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>📅 备份保留天数</div>
+                                <select
+                                    value={settings.backupRetentionDays}
+                                    onChange={(e) => handleChange('backupRetentionDays', parseInt(e.target.value))}
+                                    style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #cbd5e1', background: 'white', fontSize: '0.88rem', color: '#334155', outline: 'none', cursor: 'pointer', appearance: 'auto' }}
+                                >
+                                    <option value={3}>3 天</option>
+                                    <option value={7}>7 天</option>
+                                    <option value={14}>14 天</option>
+                                    <option value={30}>30 天</option>
+                                    <option value={60}>60 天</option>
+                                    <option value={90}>90 天</option>
+                                </select>
+                                <div style={{ fontSize: '0.72rem', color: '#94a3b8', marginTop: '6px' }}>超过保留天数的备份将自动清理</div>
+                            </div>
+
+                            {/* 邮件推送 */}
+                            <div style={{ padding: '14px 18px', background: settings.backupEmailEnabled ? 'linear-gradient(135deg, rgba(59,130,246,0.06), rgba(37,99,235,0.03))' : 'rgba(248,250,252,0.8)', borderRadius: '14px', border: `1px solid ${settings.backupEmailEnabled ? 'rgba(59,130,246,0.2)' : '#e2e8f0'}`, transition: 'all 0.2s' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <div>
+                                        <div style={{ fontWeight: 600, fontSize: '0.82rem', color: '#475569', display: 'flex', alignItems: 'center', gap: '6px' }}>📧 邮件推送</div>
+                                        <div style={{ fontSize: '0.72rem', color: '#94a3b8', marginTop: '2px' }}>备份完成后发送通知（附带SQL文件）</div>
+                                    </div>
+                                    <label className="toggle-switch">
+                                        <input type="checkbox" checked={settings.backupEmailEnabled} onChange={(e) => handleChange('backupEmailEnabled', e.target.checked)} />
+                                        <span className="toggle-slider"></span>
+                                    </label>
+                                </div>
+
+                                {settings.backupEmailEnabled && (
+                                    <div style={{ marginTop: '12px' }}>
+                                        <div style={{ fontWeight: 500, fontSize: '0.78rem', color: '#64748b', marginBottom: '6px' }}>接收邮箱</div>
+                                        <input
+                                            type="email"
+                                            value={settings.backupEmail}
+                                            onChange={(e) => handleChange('backupEmail', e.target.value)}
+                                            placeholder="admin@example.com"
+                                            style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #cbd5e1', background: 'white', fontSize: '0.88rem', color: '#334155', outline: 'none', boxSizing: 'border-box' }}
+                                        />
+                                        <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '5px' }}>≤25MB 以附件发送，超过则仅通知</div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* 应用按钮 */}
+                            <button
+                                onClick={handleRestartSchedule}
+                                style={{ marginTop: '4px', width: '100%', padding: '13px', borderRadius: '12px', fontSize: '0.9rem', background: 'linear-gradient(135deg, #059669, #10b981)', border: 'none', cursor: 'pointer', color: 'white', fontWeight: 600, boxShadow: '0 4px 12px rgba(16,185,129,0.3)', transition: 'all 0.2s', letterSpacing: '0.3px' }}
+                            >
+                                🔄 保存并应用备份计划
+                            </button>
+                        </div>
+                    )}
+                </div>
+
+                {/* 右栏：备份状态与文件 */}
+                <div style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.95), rgba(248,250,252,0.95))', borderRadius: '16px', padding: '24px', border: '1px solid #e2e8f0', boxShadow: '0 2px 12px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column' }}>
+                    <h4 style={{ margin: '0 0 20px', fontSize: '1rem', fontWeight: 700, color: '#1e293b', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ width: '32px', height: '32px', background: 'linear-gradient(135deg, #2563eb, #3b82f6)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px' }}>📋</span>
+                        备份记录
+                    </h4>
+
+                    {backupStatus ? (
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                            {/* 最近备份信息 */}
+                            {backupStatus.lastBackup?.time && (
+                                <div style={{ background: backupStatus.lastBackup.status === 'success' ? 'linear-gradient(135deg, rgba(16,185,129,0.08), rgba(5,150,105,0.05))' : 'linear-gradient(135deg, rgba(239,68,68,0.08), rgba(220,38,38,0.05))', borderRadius: '12px', padding: '14px 16px', marginBottom: '16px', border: `1px solid ${backupStatus.lastBackup.status === 'success' ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)'}` }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <span style={{ fontSize: '0.8rem', fontWeight: 600, color: backupStatus.lastBackup.status === 'success' ? '#059669' : '#dc2626' }}>
+                                            {backupStatus.lastBackup.status === 'success' ? '✅ 最近一次备份成功' : '❌ 最近一次备份失败'}
+                                        </span>
+                                        <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                                            {new Date(backupStatus.lastBackup.time).toLocaleString('zh-CN')}
+                                        </span>
+                                    </div>
+                                    {backupStatus.lastBackup.filename && (
+                                        <div style={{ marginTop: '6px', fontFamily: "'SF Mono', Monaco, monospace", fontSize: '0.75rem', color: '#475569' }}>
+                                            {backupStatus.lastBackup.filename}
+                                        </div>
+                                    )}
+                                    {backupStatus.lastBackup.error && (
+                                        <div style={{ marginTop: '8px', fontSize: '0.78rem', color: '#dc2626', padding: '8px 10px', background: 'rgba(239,68,68,0.08)', borderRadius: '8px' }}>
+                                            {backupStatus.lastBackup.error}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* 文件列表 */}
+                            {backupStatus.backups?.length > 0 ? (
+                                <div style={{ flex: 1 }}>
+                                    <div style={{ fontSize: '0.78rem', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '10px' }}>
+                                        历史备份文件
+                                    </div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                        {backupStatus.backups.slice(0, 8).map((b, i) => (
+                                            <div key={b.filename} style={{
+                                                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                                padding: '10px 14px', borderRadius: '10px',
+                                                background: i % 2 === 0 ? 'rgba(248,250,252,0.8)' : 'rgba(241,245,249,0.5)',
+                                                border: '1px solid rgba(226,232,240,0.6)',
+                                                transition: 'all 0.15s ease'
+                                            }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                    <span style={{ fontSize: '1.1rem' }}>💾</span>
+                                                    <div>
+                                                        <div style={{ fontFamily: "'SF Mono', Monaco, monospace", fontSize: '0.78rem', color: '#334155', fontWeight: 500 }}>
+                                                            {b.filename}
+                                                        </div>
+                                                        <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '2px' }}>
+                                                            {new Date(b.createdAt).toLocaleString('zh-CN')}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <span style={{
+                                                    padding: '4px 10px', borderRadius: '20px', fontSize: '0.72rem', fontWeight: 600,
+                                                    background: 'linear-gradient(135deg, rgba(59,130,246,0.1), rgba(37,99,235,0.1))',
+                                                    color: '#2563eb', border: '1px solid rgba(59,130,246,0.2)'
+                                                }}>
+                                                    {formatSize(b.size)}
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            ) : (
+                                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 20px', color: '#94a3b8' }}>
+                                    <div style={{ fontSize: '3rem', marginBottom: '12px', opacity: 0.5 }}>📂</div>
+                                    <div style={{ fontSize: '0.9rem', fontWeight: 500 }}>暂无备份文件</div>
+                                    <div style={{ fontSize: '0.8rem', marginTop: '4px' }}>启用自动备份或手动执行一次备份</div>
+                                </div>
+                            )}
+                        </div>
+                    ) : (
+                        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', fontSize: '0.9rem' }}>
+                            加载中...
+                        </div>
+                    )}
+
+                    {/* 手动备份按钮 */}
+                    <button
+                        onClick={handleManualBackup}
+                        disabled={running}
+                        style={{
+                            marginTop: '16px', width: '100%', padding: '14px', borderRadius: '12px',
+                            fontSize: '0.9rem', fontWeight: 600, cursor: running ? 'not-allowed' : 'pointer',
+                            background: running ? '#94a3b8' : 'linear-gradient(135deg, #2563eb 0%, #3b82f6 100%)',
+                            color: 'white', border: 'none',
+                            boxShadow: running ? 'none' : '0 4px 15px rgba(37,99,235,0.3)',
+                            transition: 'all 0.2s ease',
+                            opacity: running ? 0.7 : 1
+                        }}
+                    >
+                        {running ? '⏳ 正在备份数据库...' : '🚀 立即执行备份'}
+                    </button>
+                </div>
+            </div>
+        </div>
+    )
+}
+
 function SettingsPage() {
     const { token } = useAuthStore()
     const { showToast } = useToast()
@@ -2604,9 +3106,13 @@ function SettingsPage() {
         alipayEnabled: true,
         wechatEnabled: true,
         usdtEnabled: false,
+        bscUsdtEnabled: false,
         // USDT配置
         usdtWalletAddress: '',
         usdtExchangeRate: 7,
+        bscUsdtWalletAddress: '',
+        bscUsdtExchangeRate: 7,
+        bscUsdtApiKey: '',
         // 订单设置
         orderTimeout: 30,
         autoCancel: true,
@@ -2616,7 +3122,21 @@ function SettingsPage() {
         smtpPort: 465,
         smtpUser: '',
         smtpPass: '',
-        emailNotify: true
+        emailNotify: true,
+        // 管理员通知设置
+        adminNotifyEmail: '',
+        notifyOrderPaid: true,
+        notifyPendingShip: true,
+        notifyNewTicket: true,
+        notifyNewUser: false,
+        notifyLowStock: true,
+        notifyOrderCancelled: false,
+        // 数据库备份设置
+        backupEnabled: false,
+        backupFrequency: 1,
+        backupRetentionDays: 7,
+        backupEmailEnabled: false,
+        backupEmail: ''
     })
 
     const [activeTab, setActiveTab] = useState('basic')
@@ -2640,8 +3160,8 @@ function SettingsPage() {
                                     // 转换布尔值
                                     if (value === 'true') return [key, true]
                                     if (value === 'false') return [key, false]
-                                    // 转换数字
-                                    if (!isNaN(value) && value !== '') return [key, Number(value)]
+                                    // 转换数字（排除0x开头的地址等非十进制字符串）
+                                    if (value !== '' && /^-?\d+(\.\d+)?$/.test(value)) return [key, Number(value)]
                                     return [key, value]
                                 })
                             )
@@ -2697,7 +3217,9 @@ function SettingsPage() {
         { id: 'basic', label: '基本设置' },
         { id: 'payment', label: '支付设置' },
         { id: 'order', label: '订单设置' },
-        { id: 'email', label: '邮件设置' }
+        { id: 'email', label: '邮件设置' },
+        { id: 'notify', label: '通知设置' },
+        { id: 'backup', label: '数据库备份' }
     ]
 
     return (
@@ -2829,6 +3351,58 @@ function SettingsPage() {
                                         step={0.1}
                                     />
                                     <span className="setting-hint">当前汇率：1 USDT = ¥{settings.usdtExchangeRate}</span>
+                                </div>
+                            </>
+                        )}
+
+                        <div className="setting-item toggle-item">
+                            <div className="toggle-info">
+                                <label>USDT-BEP20</label>
+                                <span className="toggle-desc">启用BSC/BNB智能链USDT支付</span>
+                            </div>
+                            <label className="toggle-switch">
+                                <input
+                                    type="checkbox"
+                                    checked={settings.bscUsdtEnabled}
+                                    onChange={(e) => handleChange('bscUsdtEnabled', e.target.checked)}
+                                />
+                                <span className="toggle-slider"></span>
+                            </label>
+                        </div>
+
+                        {settings.bscUsdtEnabled && (
+                            <>
+                                <div className="setting-item">
+                                    <label>USDT 收款地址 (BEP20)</label>
+                                    <input
+                                        type="text"
+                                        value={settings.bscUsdtWalletAddress}
+                                        onChange={(e) => handleChange('bscUsdtWalletAddress', e.target.value)}
+                                        placeholder="0x开头的BEP20地址"
+                                    />
+                                    <span className="setting-hint">请确保地址正确，否则无法收款</span>
+                                </div>
+                                <div className="setting-item">
+                                    <label>USDT 汇率 (1 USDT = ? CNY)</label>
+                                    <input
+                                        type="number"
+                                        value={settings.bscUsdtExchangeRate}
+                                        onChange={(e) => handleChange('bscUsdtExchangeRate', parseFloat(e.target.value))}
+                                        min={1}
+                                        max={20}
+                                        step={0.1}
+                                    />
+                                    <span className="setting-hint">当前汇率：1 USDT = ¥{settings.bscUsdtExchangeRate}</span>
+                                </div>
+                                <div className="setting-item">
+                                    <label>BscScan API Key (选填推荐)</label>
+                                    <input
+                                        type="text"
+                                        value={settings.bscUsdtApiKey}
+                                        onChange={(e) => handleChange('bscUsdtApiKey', e.target.value)}
+                                        placeholder="用于加速查询防限流（免费申请）"
+                                    />
+                                    <span className="setting-hint">前往 bscscan.com/apis 免费获取</span>
                                 </div>
                             </>
                         )}
@@ -3005,6 +3579,120 @@ function SettingsPage() {
                             <span className="setting-hint">先保存设置，再测试连接</span>
                         </div>
                     </div>
+                )}
+
+                {/* 通知设置 */}
+                {activeTab === 'notify' && (
+                    <div className="settings-section">
+                        <div className="setting-item">
+                            <label>管理员收信邮箱</label>
+                            <input
+                                type="email"
+                                value={settings.adminNotifyEmail}
+                                onChange={(e) => handleChange('adminNotifyEmail', e.target.value)}
+                                placeholder="admin@example.com"
+                            />
+                            <span className="setting-hint">事件通知将发送到此邮箱，留空则不发送</span>
+                        </div>
+
+                        <div style={{ marginTop: '8px' }}>
+                            <label style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text-primary)', display: 'block', marginBottom: '16px' }}>事件通知开关</label>
+                        </div>
+
+                        <div className="setting-item toggle-item">
+                            <div className="toggle-info">
+                                <label>💰 订单支付成功</label>
+                                <span className="toggle-desc">用户完成支付后通知管理员</span>
+                            </div>
+                            <label className="toggle-switch">
+                                <input
+                                    type="checkbox"
+                                    checked={settings.notifyOrderPaid}
+                                    onChange={(e) => handleChange('notifyOrderPaid', e.target.checked)}
+                                />
+                                <span className="toggle-slider"></span>
+                            </label>
+                        </div>
+
+                        <div className="setting-item toggle-item">
+                            <div className="toggle-info">
+                                <label>📦 待手动发货</label>
+                                <span className="toggle-desc">订单已支付但无卡密自动发放，需手动发货时通知</span>
+                            </div>
+                            <label className="toggle-switch">
+                                <input
+                                    type="checkbox"
+                                    checked={settings.notifyPendingShip}
+                                    onChange={(e) => handleChange('notifyPendingShip', e.target.checked)}
+                                />
+                                <span className="toggle-slider"></span>
+                            </label>
+                        </div>
+
+                        <div className="setting-item toggle-item">
+                            <div className="toggle-info">
+                                <label>🎫 新工单创建</label>
+                                <span className="toggle-desc">用户提交新工单时通知管理员</span>
+                            </div>
+                            <label className="toggle-switch">
+                                <input
+                                    type="checkbox"
+                                    checked={settings.notifyNewTicket}
+                                    onChange={(e) => handleChange('notifyNewTicket', e.target.checked)}
+                                />
+                                <span className="toggle-slider"></span>
+                            </label>
+                        </div>
+
+                        <div className="setting-item toggle-item">
+                            <div className="toggle-info">
+                                <label>👤 新用户注册</label>
+                                <span className="toggle-desc">有新用户注册时通知管理员</span>
+                            </div>
+                            <label className="toggle-switch">
+                                <input
+                                    type="checkbox"
+                                    checked={settings.notifyNewUser}
+                                    onChange={(e) => handleChange('notifyNewUser', e.target.checked)}
+                                />
+                                <span className="toggle-slider"></span>
+                            </label>
+                        </div>
+
+                        <div className="setting-item toggle-item">
+                            <div className="toggle-info">
+                                <label>⚠️ 库存不足预警</label>
+                                <span className="toggle-desc">商品库存低于阈值时通知管理员</span>
+                            </div>
+                            <label className="toggle-switch">
+                                <input
+                                    type="checkbox"
+                                    checked={settings.notifyLowStock}
+                                    onChange={(e) => handleChange('notifyLowStock', e.target.checked)}
+                                />
+                                <span className="toggle-slider"></span>
+                            </label>
+                        </div>
+
+                        <div className="setting-item toggle-item">
+                            <div className="toggle-info">
+                                <label>📦 订单取消</label>
+                                <span className="toggle-desc">订单被取消时通知管理员</span>
+                            </div>
+                            <label className="toggle-switch">
+                                <input
+                                    type="checkbox"
+                                    checked={settings.notifyOrderCancelled}
+                                    onChange={(e) => handleChange('notifyOrderCancelled', e.target.checked)}
+                                />
+                                <span className="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                )}
+
+                {activeTab === 'backup' && (
+                    <BackupSettings token={token} settings={settings} handleChange={handleChange} showToast={showToast} />
                 )}
             </div>
         </div>

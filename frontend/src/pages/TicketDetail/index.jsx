@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { FiArrowLeft, FiSend, FiClock, FiCheck, FiAlertCircle, FiPackage } from 'react-icons/fi'
+import { FiArrowLeft, FiSend, FiClock, FiCheck, FiAlertCircle, FiPackage, FiCheckCircle } from 'react-icons/fi'
 import { useAuthStore } from '../../store/authStore'
 import toast from 'react-hot-toast'
 import './TicketDetail.css'
@@ -8,6 +8,7 @@ import './TicketDetail.css'
 const statusMap = {
     OPEN: { label: '待处理', class: 'open', icon: <FiAlertCircle /> },
     IN_PROGRESS: { label: '处理中', class: 'in-progress', icon: <FiClock /> },
+    COMPLETED: { label: '已完成', class: 'completed', icon: <FiCheckCircle /> },
     CLOSED: { label: '已关闭', class: 'closed', icon: <FiCheck /> }
 }
 
@@ -189,24 +190,31 @@ function TicketDetail() {
 
                     {/* 发送消息 */}
                     {ticket.status !== 'CLOSED' ? (
-                        <form className="message-input-form" onSubmit={handleSend}>
-                            <textarea
-                                className="message-input"
-                                placeholder="输入消息..."
-                                value={message}
-                                onChange={(e) => setMessage(e.target.value)}
-                                rows={3}
-                                disabled={sending}
-                            />
-                            <button
-                                type="submit"
-                                className="btn btn-primary send-btn"
-                                disabled={sending || !message.trim()}
-                            >
-                                <FiSend />
-                                {sending ? '发送中...' : '发送'}
-                            </button>
-                        </form>
+                        <>
+                            {ticket.status === 'COMPLETED' && (
+                                <div className="ticket-completed-notice">
+                                    工单已标记为已完成，如有疑问请回复此工单，24小时内无回复将自动关闭
+                                </div>
+                            )}
+                            <form className="message-input-form" onSubmit={handleSend}>
+                                <textarea
+                                    className="message-input"
+                                    placeholder="输入消息..."
+                                    value={message}
+                                    onChange={(e) => setMessage(e.target.value)}
+                                    rows={3}
+                                    disabled={sending}
+                                />
+                                <button
+                                    type="submit"
+                                    className="btn btn-primary send-btn"
+                                    disabled={sending || !message.trim()}
+                                >
+                                    <FiSend />
+                                    {sending ? '发送中...' : '发送'}
+                                </button>
+                            </form>
+                        </>
                     ) : (
                         <div className="ticket-closed-notice">
                             此工单已关闭，如有新问题请提交新工单

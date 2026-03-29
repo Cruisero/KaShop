@@ -35,7 +35,8 @@ function Products() {
     const [activeCategory, setActiveCategory] = useState('all')
     const [sortBy, setSortBy] = useState('default')
     const [products, setProducts] = useState([])
-    const [categories, setCategories] = useState(defaultCategories)
+    const [categories, setCategories] = useState([{ id: 'all', name: '全部商品', icon: '🏠' }])
+    const [categoriesLoaded, setCategoriesLoaded] = useState(false)
     const [loading, setLoading] = useState(true)
 
 
@@ -48,16 +49,19 @@ function Products() {
                 if (categoryList.length > 0) {
                     const cats = [
                         { id: 'all', name: '全部商品', icon: '🏠' },
-                        ...categoryList.map(c => ({
-                            id: c.id,
-                            name: c.name,
-                            icon: c.icon || '📦'
-                        }))
+                        ...categoryList
+                            .filter(c => c.productCount > 0)
+                            .map(c => ({
+                                id: c.id,
+                                name: c.name,
+                                icon: c.icon || '📦'
+                            }))
                     ]
                     setCategories(cats)
                 }
             })
             .catch(err => console.log('获取分类失败:', err))
+            .finally(() => setCategoriesLoaded(true))
     }, [])
 
     // 获取商品列表
@@ -113,8 +117,8 @@ function Products() {
     return (
         <div className="products-page">
             {/* 分类导航 */}
-            <div className="category-nav">
-                {categories.map((cat) => (
+            <div className={`category-nav${categoriesLoaded ? ' loaded' : ''}`}>
+                {categoriesLoaded ? categories.map((cat) => (
                     <button
                         key={cat.id}
                         className={`category-btn ${activeCategory === cat.id ? 'active' : ''}`}
@@ -123,7 +127,11 @@ function Products() {
                         <span className="category-icon">{cat.icon}</span>
                         <span className="category-name">{cat.name}</span>
                     </button>
-                ))}
+                )) : (
+                    Array.from({ length: 4 }).map((_, i) => (
+                        <div key={i} className="category-btn skeleton" />
+                    ))
+                )}
             </div>
 
             {/* 筛选栏 */}

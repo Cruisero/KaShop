@@ -7,7 +7,7 @@
 
 .query-container {
     width: 100%;
-    max-width: 480px;
+    max-width: 520px;
     text-align: center;
 }
 
@@ -47,7 +47,7 @@
 }
 
 .form-group {
-    margin-bottom: 24px;
+    margin-bottom: 20px;
 }
 
 .form-group label {
@@ -58,17 +58,12 @@
     margin-bottom: 10px;
 }
 
-.required {
-    color: var(--error);
+.query-input {
+    font-size: 1rem;
+    padding: 14px 16px;
 }
 
-.optional {
-    font-size: 0.85rem;
-    font-weight: 400;
-    color: var(--text-muted);
-}
-
-.form-tip {
+.input-hint {
     display: block;
     margin-top: 8px;
     font-size: 0.8rem;
@@ -77,6 +72,7 @@
 
 .query-btn {
     width: 100%;
+    margin-top: 8px;
 }
 
 .loading-text {
@@ -93,6 +89,102 @@
     border-top-color: white;
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
+}
+
+/* 订单列表结果 */
+.order-results {
+    margin-top: 32px;
+    text-align: left;
+}
+
+.results-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.order-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.order-list-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    text-decoration: none;
+    transition: all 0.2s;
+    cursor: pointer;
+}
+
+.order-list-item:hover {
+    border-color: var(--primary-light);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+    transform: translateY(-1px);
+}
+
+.order-item-left {
+    flex: 1;
+    min-width: 0;
+}
+
+.order-item-product {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.order-item-img {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+.order-item-name {
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 200px;
+}
+
+.order-item-no {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-top: 2px;
+}
+
+.order-item-right {
+    text-align: right;
+    flex-shrink: 0;
+    margin-left: 16px;
+}
+
+.order-item-price {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.order-item-status {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 4px;
+    font-size: 0.8rem;
+    margin-top: 4px;
 }
 
 /* 提示信息 */
@@ -132,4 +224,19 @@
 
 .query-tips li:last-child {
     margin-bottom: 0;
+}
+
+/* 响应式 */
+@media (max-width: 640px) {
+    .order-query-page {
+        padding: 30px 12px;
+    }
+
+    .query-form {
+        padding: 24px 18px;
+    }
+
+    .order-item-name {
+        max-width: 140px;
+    }
 }
