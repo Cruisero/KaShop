@@ -10,6 +10,9 @@ const { initScheduledTasks } = require('./tasks/scheduler')
 
 const app = express()
 
+// 反向代理场景下启用真实客户端 IP（Nginx -> Node）
+app.set('trust proxy', 1)
+
 // 安全中间件 (配置允许跨域图片)
 app.use(helmet({
     crossOriginResourcePolicy: { policy: 'cross-origin' },

@@ -4,6 +4,10 @@ const orderController = require('../controllers/orderController')
 const { validateBody, validateQuery } = require('../middleware/validation')
 const { createOrderSchema, queryOrderSchema } = require('../validators/order')
 const { authenticate, optionalAuth } = require('../middleware/auth')
+const {
+    orderQuerySecurityGuard,
+    orderQueryRateLimiter
+} = require('../middleware/security')
 
 // 创建订单 (可选认证 - 登录用户会关联userId)
 router.post('/', optionalAuth, validateBody(createOrderSchema), orderController.createOrder)
@@ -12,7 +16,7 @@ router.post('/', optionalAuth, validateBody(createOrderSchema), orderController.
 router.get('/my-orders', authenticate, orderController.getUserOrders)
 
 // 通过订单号或邮箱查询订单
-router.get('/query', validateQuery(queryOrderSchema), orderController.queryOrder)
+router.get('/query', orderQueryRateLimiter, orderQuerySecurityGuard, validateQuery(queryOrderSchema), orderController.queryOrder)
 
 // 获取订单详情
 router.get('/:orderNo', orderController.getOrderByNo)

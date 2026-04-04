@@ -2,6 +2,10 @@ const express = require('express')
 const router = express.Router()
 const ticketController = require('../controllers/ticketController')
 const { authenticate, isAdmin } = require('../middleware/auth')
+const {
+    ticketCreateSecurityGuard,
+    ticketCreateRateLimiter
+} = require('../middleware/security')
 
 // ==================== 用户端路由 ====================
 
@@ -9,7 +13,7 @@ const { authenticate, isAdmin } = require('../middleware/auth')
 router.get('/orders', authenticate, ticketController.getMyOrders)
 
 // 创建工单
-router.post('/', authenticate, ticketController.createTicket)
+router.post('/', authenticate, ticketCreateRateLimiter, ticketCreateSecurityGuard, ticketController.createTicket)
 
 // 获取我的工单列表
 router.get('/', authenticate, ticketController.getMyTickets)

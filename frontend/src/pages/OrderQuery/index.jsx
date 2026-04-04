@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { FiSearch, FiPackage, FiClock, FiCheckCircle, FiXCircle, FiAlertCircle } from 'react-icons/fi'
 import toast from 'react-hot-toast'
+import { useAuthStore } from '../../store/authStore'
 import './OrderQuery.css'
 
 const statusMap = {
@@ -14,6 +15,7 @@ const statusMap = {
 
 function OrderQuery() {
     const navigate = useNavigate()
+    const { isAuthenticated } = useAuthStore()
     const [query, setQuery] = useState('')
     const [loading, setLoading] = useState(false)
     const [orders, setOrders] = useState(null)
@@ -74,6 +76,11 @@ function OrderQuery() {
                 <p className="query-desc">
                     输入订单号或下单邮箱，查询订单状态和卡密信息
                 </p>
+                {!isAuthenticated && (
+                    <p className="query-desc" style={{ color: '#ef4444', fontWeight: 600 }}>
+                        未登录用户只显示最近三个订单
+                    </p>
+                )}
 
                 <form className="query-form" onSubmit={handleSubmit}>
                     <div className="form-group">
@@ -86,7 +93,7 @@ function OrderQuery() {
                         />
                         {query.trim() && (
                             <span className="input-hint">
-                                {isEmail(query.trim()) ? '📧 将按邮箱查询所有关联订单' : '📋 将按订单号查询'}
+                                {isEmail(query.trim()) ? '📧 将按邮箱查询最近 3 个订单' : '📋 将按订单号查询'}
                             </span>
                         )}
                     </div>
@@ -155,7 +162,7 @@ function OrderQuery() {
                         <h3>📌 温馨提示</h3>
                         <ul>
                             <li>订单号可在支付成功页面或邮件中找到</li>
-                            <li>通过邮箱可查询该邮箱下的所有订单</li>
+                            <li>通过邮箱最多查询最近 3 个订单</li>
                             <li>卡密信息将在支付成功后自动发放</li>
                             <li>如有问题请通过工单联系客服</li>
                         </ul>

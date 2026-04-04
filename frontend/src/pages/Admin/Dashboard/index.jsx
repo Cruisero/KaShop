@@ -1785,12 +1785,21 @@ function TicketsManage() {
         open: tickets.filter(t => t.status === 'OPEN').length,
         inProgress: tickets.filter(t => t.status === 'IN_PROGRESS').length,
         completed: tickets.filter(t => t.status === 'COMPLETED').length,
-        closed: tickets.filter(t => t.status === 'CLOSED').length
+        closed: tickets.filter(t => t.status === 'CLOSED').length,
+        unread: tickets.reduce((sum, ticket) => sum + (ticket.adminUnreadCount || 0), 0)
     }
 
     useEffect(() => {
         fetchTickets()
-    }, [statusFilter])
+        const handleFocus = () => fetchTickets()
+        const intervalId = window.setInterval(fetchTickets, 30000)
+        window.addEventListener('focus', handleFocus)
+
+        return () => {
+            window.clearInterval(intervalId)
+            window.removeEventListener('focus', handleFocus)
+        }
+    }, [statusFilter, token])
 
     const fetchTickets = async () => {
         try {
@@ -1931,6 +1940,11 @@ function TicketsManage() {
             <div className="section-header">
                 <h2>工单列表</h2>
                 <div className="header-info">
+                    {stats.unread > 0 && (
+                        <span className="ticket-unread-summary">
+                            {stats.unread > 99 ? '99+' : stats.unread} 条用户新消息待处理
+                        </span>
+                    )}
                     <span className="total-count">共 {tickets.length} 条工单</span>
                     <select
                         className="filter-select"
@@ -1963,15 +1977,22 @@ function TicketsManage() {
                         <div key={ticket.id} className="ticket-card" onClick={() => handleViewTicket(ticket)}>
                             <div className="ticket-header">
                                 <span className="ticket-no">{ticket.ticketNo}</span>
-                                <span
-                                    className="ticket-type"
-                                    style={{
-                                        color: typeMap[ticket.type]?.color,
-                                        background: typeMap[ticket.type]?.bg
-                                    }}
-                                >
-                                    {typeMap[ticket.type]?.label}
-                                </span>
+                                <div className="ticket-header-right">
+                                    {ticket.adminUnreadCount > 0 && (
+                                        <span className="ticket-unread-pill">
+                                            {ticket.adminUnreadCount > 99 ? '99+' : ticket.adminUnreadCount} 条新消息
+                                        </span>
+                                    )}
+                                    <span
+                                        className="ticket-type"
+                                        style={{
+                                            color: typeMap[ticket.type]?.color,
+                                            background: typeMap[ticket.type]?.bg
+                                        }}
+                                    >
+                                        {typeMap[ticket.type]?.label}
+                                    </span>
+                                </div>
                             </div>
                             <div className="ticket-subject">{ticket.subject}</div>
                             <div className="ticket-meta">
@@ -2129,11 +2150,18 @@ function CardsManage() {
     const [cards, setCards] = useState([])
     const [products, setProducts] = useState([])
     const [selectedProductId, setSelectedProductId] = useState(initialProductId)
+    const [selectedVariantFilter, setSelectedVariantFilter] = useState('')
     const [statusFilter, setStatusFilter] = useState('')
     const [loading, setLoading] = useState(false)
     const [page, setPage] = useState(1)
     const [totalPages, setTotalPages] = useState(1)
     const [total, setTotal] = useState(0)
+    const [cardStats, setCardStats] = useState({
+        total: 0,
+        available: 0,
+        sold: 0,
+        expired: 0
+    })
     const [showImportModal, setShowImportModal] = useState(false)
     const [importText, setImportText] = useState('')
     const [selectedVariantId, setSelectedVariantId] = useState('')
@@ -2167,6 +2195,7 @@ function CardsManage() {
         try {
             const params = new URLSearchParams({ page, pageSize: 20 })
             if (selectedProductId) params.append('productId', selectedProductId)
+            if (selectedVariantFilter) params.append('variantId', selectedVariantFilter)
             if (statusFilter) params.append('status', statusFilter)
 
             const response = await fetch(`/api/admin/cards?${params}`, {
@@ -2177,6 +2206,21 @@ function CardsManage() {
                 setCards(data.cards)
                 setTotalPages(data.totalPages)
                 setTotal(data.total)
+                if (data.stats) {
+                    setCardStats({
+                        total: data.stats.total || 0,
+                        available: data.stats.available || 0,
+                        sold: data.stats.sold || 0,
+                        expired: data.stats.expired || 0
+                    })
+                } else {
+                    setCardStats({
+                        total: data.total || 0,
+                        available: data.cards.filter(c => c.status === 'AVAILABLE').length,
+                        sold: data.cards.filter(c => c.status === 'SOLD').length,
+                        expired: data.cards.filter(c => c.status === 'EXPIRED').length
+                    })
+                }
             }
         } catch (error) {
             showToast('获取卡密列表失败', 'error')
@@ -2187,7 +2231,7 @@ function CardsManage() {
 
     useEffect(() => {
         fetchCards()
-    }, [selectedProductId, statusFilter, page])
+    }, [selectedProductId, selectedVariantFilter, statusFilter, page, token])
 
     // 批量导入卡密
     const handleImport = async () => {
@@ -2355,6 +2399,9 @@ function CardsManage() {
         }
     }
 
+    const selectedProduct = products.find(p => p.id === selectedProductId)
+    const productVariants = selectedProduct?.variants || []
+
     return (
         <div className="manage-page">
             <div className="page-header">
@@ -2374,17 +2421,55 @@ function CardsManage() {
                 </div>
             </div>
 
+            <div className="cards-stats-grid">
+                <div className="cards-stat-card total">
+                    <div className="cards-stat-label">卡密总数</div>
+                    <div className="cards-stat-value">{cardStats.total}</div>
+                </div>
+                <div className="cards-stat-card available">
+                    <div className="cards-stat-label">可用剩余</div>
+                    <div className="cards-stat-value">{cardStats.available}</div>
+                </div>
+                <div className="cards-stat-card sold">
+                    <div className="cards-stat-label">已使用</div>
+                    <div className="cards-stat-value">{cardStats.sold}</div>
+                </div>
+                <div className="cards-stat-card expired">
+                    <div className="cards-stat-label">已过期</div>
+                    <div className="cards-stat-value">{cardStats.expired}</div>
+                </div>
+            </div>
+
             {/* 筛选栏 */}
             <div className="filter-bar">
                 <div className="filter-group">
                     <label>选择商品</label>
                     <select
                         value={selectedProductId}
-                        onChange={(e) => { setSelectedProductId(e.target.value); setPage(1); }}
+                        onChange={(e) => {
+                            setSelectedProductId(e.target.value)
+                            setSelectedVariantFilter('')
+                            setPage(1)
+                            setSelectedCards([])
+                        }}
                     >
                         <option value="">全部商品</option>
                         {products.map(p => (
                             <option key={p.id} value={p.id}>{p.name}</option>
+                        ))}
+                    </select>
+                </div>
+                <div className="filter-group">
+                    <label>规格</label>
+                    <select
+                        value={selectedVariantFilter}
+                        onChange={(e) => { setSelectedVariantFilter(e.target.value); setPage(1); }}
+                        disabled={!selectedProductId}
+                    >
+                        <option value="">全部规格</option>
+                        <option value="default">默认规格</option>
+                        {productVariants.map(v => (
+                            <option key={v.id} value={v.id}>{v.name}</option>
                         ))}
                     </select>
                 </div>
@@ -3163,6 +3248,19 @@ function SettingsPage() {
         notifyNewUser: false,
         notifyLowStock: true,
         notifyOrderCancelled: false,
+        // 安全策略设置
+        securityEnabled: true,
+        securityEnableIpBlock: true,
+        securityBlockedIps: '',
+        securityEnableEmailSuffixBlock: true,
+        securityBlockedEmailSuffixes: '',
+        securityRequireVerifiedForTicket: true,
+        securityRegisterLimitMax: 5,
+        securityRegisterLimitWindowMinutes: 10,
+        securityOrderQueryLimitMax: 20,
+        securityOrderQueryLimitWindowMinutes: 10,
+        securityTicketCreateLimitMax: 3,
+        securityTicketCreateLimitWindowMinutes: 10,
         // 数据库备份设置
         backupEnabled: false,
         backupFrequency: 1,
@@ -3251,6 +3349,7 @@ function SettingsPage() {
         { id: 'order', label: '订单设置' },
         { id: 'email', label: '邮件设置' },
         { id: 'notify', label: '通知设置' },
+        { id: 'security', label: '安全策略' },
         { id: 'backup', label: '数据库备份' }
     ]
 
@@ -3719,6 +3818,165 @@ function SettingsPage() {
                                 />
                                 <span className="toggle-slider"></span>
                             </label>
+                        </div>
+                    </div>
+                )}
+
+                {activeTab === 'security' && (
+                    <div className="settings-section">
+                        <div className="setting-item toggle-item">
+                            <div className="toggle-info">
+                                <label>启用安全策略</label>
+                                <span className="toggle-desc">总开关，关闭后将跳过黑名单与专项限流</span>
+                            </div>
+                            <label className="toggle-switch">
+                                <input
+                                    type="checkbox"
+                                    checked={settings.securityEnabled}
+                                    onChange={(e) => handleChange('securityEnabled', e.target.checked)}
+                                />
+                                <span className="toggle-slider"></span>
+                            </label>
+                        </div>
+
+                        <div className="setting-item toggle-item">
+                            <div className="toggle-info">
+                                <label>IP 黑名单拦截</label>
+                                <span className="toggle-desc">支持单 IP 和 CIDR 网段，命中后直接拒绝请求</span>
+                            </div>
+                            <label className="toggle-switch">
+                                <input
+                                    type="checkbox"
+                                    checked={settings.securityEnableIpBlock}
+                                    onChange={(e) => handleChange('securityEnableIpBlock', e.target.checked)}
+                                />
+                                <span className="toggle-slider"></span>
+                            </label>
+                        </div>
+
+                        <div className="setting-item">
+                            <label>IP 黑名单（每行或逗号分隔）</label>
+                            <textarea
+                                value={settings.securityBlockedIps}
+                                onChange={(e) => handleChange('securityBlockedIps', e.target.value)}
+                                placeholder={'示例:\n1.2.3.4\n45.67.0.0/16'}
+                                rows={4}
+                            />
+                            <span className="setting-hint">将作用于注册、订单查询、工单创建等关键接口</span>
+                        </div>
+
+                        <div className="setting-item toggle-item">
+                            <div className="toggle-info">
+                                <label>邮箱后缀黑名单</label>
+                                <span className="toggle-desc">拦截指定邮箱域名的注册、订单查询、工单创建</span>
+                            </div>
+                            <label className="toggle-switch">
+                                <input
+                                    type="checkbox"
+                                    checked={settings.securityEnableEmailSuffixBlock}
+                                    onChange={(e) => handleChange('securityEnableEmailSuffixBlock', e.target.checked)}
+                                />
+                                <span className="toggle-slider"></span>
+                            </label>
+                        </div>
+
+                        <div className="setting-item">
+                            <label>邮箱后缀黑名单（每行或逗号分隔）</label>
+                            <textarea
+                                value={settings.securityBlockedEmailSuffixes}
+                                onChange={(e) => handleChange('securityBlockedEmailSuffixes', e.target.value)}
+                                placeholder={'示例:\nsharebot.net\nmailinator.com'}
+                                rows={4}
+                            />
+                            <span className="setting-hint">只写域名后缀即可，不需要带 @</span>
+                        </div>
+
+                        <div className="setting-item toggle-item">
+                            <div className="toggle-info">
+                                <label>工单要求已验证邮箱</label>
+                                <span className="toggle-desc">未验证邮箱账号无法提交新工单</span>
+                            </div>
+                            <label className="toggle-switch">
+                                <input
+                                    type="checkbox"
+                                    checked={settings.securityRequireVerifiedForTicket}
+                                    onChange={(e) => handleChange('securityRequireVerifiedForTicket', e.target.checked)}
+                                />
+                                <span className="toggle-slider"></span>
+                            </label>
+                        </div>
+
+                        <div className="setting-item">
+                            <label>注册限流（次数 / 窗口分钟）</label>
+                            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                                <input
+                                    type="number"
+                                    min={1}
+                                    max={500}
+                                    value={settings.securityRegisterLimitMax}
+                                    onChange={(e) => handleChange('securityRegisterLimitMax', parseInt(e.target.value) || 1)}
+                                    style={{ width: '120px' }}
+                                />
+                                <span>/</span>
+                                <input
+                                    type="number"
+                                    min={1}
+                                    max={1440}
+                                    value={settings.securityRegisterLimitWindowMinutes}
+                                    onChange={(e) => handleChange('securityRegisterLimitWindowMinutes', parseInt(e.target.value) || 1)}
+                                    style={{ width: '120px' }}
+                                />
+                                <span>分钟</span>
+                            </div>
+                        </div>
+
+                        <div className="setting-item">
+                            <label>订单查询限流（次数 / 窗口分钟）</label>
+                            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                                <input
+                                    type="number"
+                                    min={1}
+                                    max={1000}
+                                    value={settings.securityOrderQueryLimitMax}
+                                    onChange={(e) => handleChange('securityOrderQueryLimitMax', parseInt(e.target.value) || 1)}
+                                    style={{ width: '120px' }}
+                                />
+                                <span>/</span>
+                                <input
+                                    type="number"
+                                    min={1}
+                                    max={1440}
+                                    value={settings.securityOrderQueryLimitWindowMinutes}
+                                    onChange={(e) => handleChange('securityOrderQueryLimitWindowMinutes', parseInt(e.target.value) || 1)}
+                                    style={{ width: '120px' }}
+                                />
+                                <span>分钟</span>
+                            </div>
+                        </div>
+
+                        <div className="setting-item">
+                            <label>工单创建限流（次数 / 窗口分钟）</label>
+                            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                                <input
+                                    type="number"
+                                    min={1}
+                                    max={200}
+                                    value={settings.securityTicketCreateLimitMax}
+                                    onChange={(e) => handleChange('securityTicketCreateLimitMax', parseInt(e.target.value) || 1)}
+                                    style={{ width: '120px' }}
+                                />
+                                <span>/</span>
+                                <input
+                                    type="number"
+                                    min={1}
+                                    max={1440}
+                                    value={settings.securityTicketCreateLimitWindowMinutes}
+                                    onChange={(e) => handleChange('securityTicketCreateLimitWindowMinutes', parseInt(e.target.value) || 1)}
+                                    style={{ width: '120px' }}
+                                />
+                                <span>分钟</span>
+                            </div>
+                            <span className="setting-hint">按“用户ID+IP”联合维度计数，更适合拦截机器人轰炸</span>
                         </div>
                     </div>
                 )}

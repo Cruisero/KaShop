@@ -1758,6 +1758,66 @@
 }
 
 /* ==================== 卡密管理样式 - 重新设计 ==================== */
+.cards-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+    margin-bottom: 18px;
+}
+
+.cards-stat-card {
+    border-radius: 14px;
+    padding: 14px 16px;
+    border: 1px solid #e2e8f0;
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
+}
+
+.cards-stat-label {
+    font-size: 0.78rem;
+    color: #64748b;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.cards-stat-value {
+    font-size: 1.35rem;
+    font-weight: 800;
+    letter-spacing: 0.2px;
+    color: #1e293b;
+}
+
+.cards-stat-card.total {
+    border-color: rgba(148, 163, 184, 0.35);
+}
+
+.cards-stat-card.available {
+    border-color: rgba(16, 185, 129, 0.35);
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(255, 255, 255, 1) 100%);
+}
+
+.cards-stat-card.available .cards-stat-value {
+    color: #059669;
+}
+
+.cards-stat-card.sold {
+    border-color: rgba(245, 158, 11, 0.35);
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, rgba(255, 255, 255, 1) 100%);
+}
+
+.cards-stat-card.sold .cards-stat-value {
+    color: #d97706;
+}
+
+.cards-stat-card.expired {
+    border-color: rgba(239, 68, 68, 0.35);
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.12) 0%, rgba(255, 255, 255, 1) 100%);
+}
+
+.cards-stat-card.expired .cards-stat-value {
+    color: #dc2626;
+}
+
 .filter-bar {
     display: flex;
     align-items: center;
@@ -1807,6 +1867,13 @@
     border-color: #cbd5e1;
 }
 
+.filter-group select:disabled {
+    background: #f8fafc;
+    border-color: #e2e8f0;
+    color: #94a3b8;
+    cursor: not-allowed;
+}
+
 .filter-group select:focus {
     outline: none;
     border-color: #ef4444;
@@ -1822,6 +1889,18 @@
     font-weight: 600;
     border-radius: 20px;
     box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+@media (max-width: 1200px) {
+    .cards-stats-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 640px) {
+    .cards-stats-grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 .card-content {
@@ -2662,11 +2741,23 @@
     display: flex;
     align-items: center;
     gap: 16px;
+    flex-wrap: wrap;
 }
 
 .total-count {
     font-size: 0.9rem;
     color: var(--text-muted);
+}
+
+.ticket-unread-summary {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: rgba(239, 68, 68, 0.12);
+    color: #dc2626;
+    font-size: 0.85rem;
+    font-weight: 600;
 }
 
 /* 加载和空状态 */
@@ -2752,7 +2843,16 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 12px;
     margin-bottom: 12px;
+}
+
+.ticket-header-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
 }
 
 .ticket-no {
@@ -2767,6 +2867,17 @@
     border-radius: 12px;
     font-size: 0.75rem;
     font-weight: 500;
+}
+
+.ticket-unread-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: rgba(239, 68, 68, 0.12);
+    color: #dc2626;
+    font-size: 0.75rem;
+    font-weight: 700;
 }
 
 .ticket-subject {
@@ -3000,5 +3111,14 @@
 
     .ticket-info-grid {
         grid-template-columns: 1fr;
+    }
+
+    .ticket-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .ticket-header-right {
+        justify-content: flex-start;
     }
 }

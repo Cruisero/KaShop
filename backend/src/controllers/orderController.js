@@ -148,7 +148,7 @@ exports.queryOrder = async (req, res, next) => {
             return res.json({ order: formatOrder(order) })
         }
 
-        // 通过邮箱查询（返回该邮箱下的所有订单列表）
+        // 通过邮箱查询（仅返回最新 3 条订单）
         const orders = await prisma.order.findMany({
             where: { email },
             include: {
@@ -157,7 +157,7 @@ exports.queryOrder = async (req, res, next) => {
                 }
             },
             orderBy: { createdAt: 'desc' },
-            take: 50
+            take: 3
         })
 
         if (orders.length === 0) {

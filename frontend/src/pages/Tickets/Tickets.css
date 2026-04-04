@@ -107,13 +107,33 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 12px;
     margin-bottom: 12px;
+}
+
+.ticket-badges {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
 }
 
 .ticket-no {
     font-size: 0.85rem;
     color: var(--text-muted);
     font-family: monospace;
+}
+
+.ticket-unread-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: rgba(239, 68, 68, 0.12);
+    color: #dc2626;
+    font-size: 0.78rem;
+    font-weight: 600;
 }
 
 .ticket-status {
@@ -206,6 +226,15 @@
         flex-direction: column;
         align-items: flex-start;
         gap: 16px;
+    }
+
+    .ticket-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .ticket-badges {
+        justify-content: flex-start;
     }
 
     .ticket-meta {

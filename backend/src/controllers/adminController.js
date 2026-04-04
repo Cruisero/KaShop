@@ -776,14 +776,20 @@ exports.getCards = async (req, res, next) => {
     try {
         const { productId, variantId, status, page = 1, pageSize = 20 } = req.query
 
-        const where = {}
-        if (productId) where.productId = productId
-        if (variantId) where.variantId = variantId
-        if (status) where.status = status.toUpperCase()
+        const baseWhere = {}
+        if (productId) baseWhere.productId = productId
+        if (variantId === 'default') {
+            baseWhere.variantId = null
+        } else if (variantId) {
+            baseWhere.variantId = variantId
+        }
 
-        const [cards, total] = await Promise.all([
+        const listWhere = { ...baseWhere }
+        if (status) listWhere.status = status.toUpperCase()
+
+        const [cards, total, statsTotal, statsByStatus] = await Promise.all([
             prisma.card.findMany({
-                where,
+                where: listWhere,
                 include: {
                     product: { select: { id: true, name: true } },
                     variant: { select: { id: true, name: true } },
@@ -793,15 +799,32 @@ exports.getCards = async (req, res, next) => {
                 skip: (page - 1) * pageSize,
                 take: parseInt(pageSize)
             }),
-            prisma.card.count({ where })
+            prisma.card.count({ where: listWhere }),
+            prisma.card.count({ where: baseWhere }),
+            prisma.card.groupBy({
+                by: ['status'],
+                where: baseWhere,
+                _count: { _all: true }
+            })
         ])
+
+        const statsMap = statsByStatus.reduce((acc, item) => {
+            acc[item.status] = item._count._all
+            return acc
+        }, {})
 
         res.json({
             cards,
             total,
             page: parseInt(page),
             pageSize: parseInt(pageSize),
-            totalPages: Math.ceil(total / pageSize)
+            totalPages: Math.ceil(total / pageSize),
+            stats: {
+                total: statsTotal,
+                available: statsMap.AVAILABLE || 0,
+                sold: statsMap.SOLD || 0,
+                expired: statsMap.EXPIRED || 0
+            }
         })
     } catch (error) {
         next(error)

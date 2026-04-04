@@ -1,5 +1,4 @@
-const { PrismaClient } = require('@prisma/client')
-const prisma = new PrismaClient()
+const prisma = require('../config/database')
 const emailService = require('../services/emailService')
 
 // 生成工单号
@@ -16,6 +15,14 @@ const ticketTypeLabel = {
     CARD_ISSUE: '卡密问题',
     REFUND: '退款申请',
     OTHER: '其他'
+}
+
+function getReadUpdateData(isAdmin) {
+    const now = new Date()
+
+    return isAdmin
+        ? { adminUnreadCount: 0, adminLastReadAt: now }
+        : { userUnreadCount: 0, userLastReadAt: now }
 }
 
 // ==================== 用户端 API ====================
@@ -43,6 +50,7 @@ exports.createTicket = async (req, res, next) => {
         }
 
         // 创建工单和第一条消息
+        const now = new Date()
         const ticket = await prisma.ticket.create({
             data: {
                 ticketNo: generateTicketNo(),
@@ -52,6 +60,9 @@ exports.createTicket = async (req, res, next) => {
                 type,
                 subject,
                 status: 'OPEN',
+                userUnreadCount: 0,
+                adminUnreadCount: 1,
+                userLastReadAt: now,
                 messages: {
                     create: {
                         senderId: userId,
@@ -73,7 +84,7 @@ exports.createTicket = async (req, res, next) => {
 
         // 通知管理员（异步，不阻塞响应）
         const { notifyNewTicket } = require('../services/adminNotifyService')
-        notifyNewTicket({ ...ticket, contactEmail: req.user?.email }).catch(e => console.error('管理员通知失败:', e))
+        notifyNewTicket({ ...ticket, contactEmail: req.user?.email, content }).catch(e => console.error('管理员通知失败:', e))
     } catch (error) {
         next(error)
     }
@@ -92,7 +103,7 @@ exports.getMyTickets = async (req, res, next) => {
 
         const tickets = await prisma.ticket.findMany({
             where,
-            orderBy: { createdAt: 'desc' },
+            orderBy: { updatedAt: 'desc' },
             include: {
                 messages: {
                     orderBy: { createdAt: 'desc' },
@@ -145,6 +156,18 @@ exports.getTicketDetail = async (req, res, next) => {
             return res.status(403).json({ error: '无权限查看此工单' })
         }
 
+        const isAdmin = req.user.role === 'ADMIN'
+        const unreadCount = isAdmin ? ticket.adminUnreadCount : ticket.userUnreadCount
+
+        if (unreadCount > 0) {
+            const readData = getReadUpdateData(isAdmin)
+            await prisma.ticket.update({
+                where: { id },
+                data: readData
+            })
+            Object.assign(ticket, readData)
+        }
+
         res.json({ ticket })
     } catch (error) {
         next(error)
@@ -182,25 +205,28 @@ exports.addMessage = async (req, res, next) => {
         // 用户回复已完成的工单，自动重新打开为处理中
         const shouldReopen = ticket.status === 'COMPLETED'
 
-        // 添加消息
-        const message = await prisma.ticketMessage.create({
-            data: {
-                ticketId: id,
-                senderId: userId,
-                isAdmin: false,
-                content,
-                images: images || null
-            }
-        })
-
-        // 更新工单时间，如果是已完成状态则重新打开
-        await prisma.ticket.update({
-            where: { id },
-            data: {
-                updatedAt: new Date(),
-                ...(shouldReopen ? { status: 'IN_PROGRESS' } : {})
-            }
-        })
+        const now = new Date()
+        const [, message] = await prisma.$transaction([
+            prisma.ticket.update({
+                where: { id },
+                data: {
+                    updatedAt: now,
+                    adminUnreadCount: { increment: 1 },
+                    userUnreadCount: 0,
+                    userLastReadAt: now,
+                    ...(shouldReopen ? { status: 'IN_PROGRESS' } : {})
+                }
+            }),
+            prisma.ticketMessage.create({
+                data: {
+                    ticketId: id,
+                    senderId: userId,
+                    isAdmin: false,
+                    content,
+                    images: images || null
+                }
+            })
+        ])
 
         res.status(201).json({
             message: '消息发送成功',
@@ -254,7 +280,7 @@ exports.getAllTickets = async (req, res, next) => {
         const [tickets, total] = await Promise.all([
             prisma.ticket.findMany({
                 where,
-                orderBy: { createdAt: 'desc' },
+                orderBy: { updatedAt: 'desc' },
                 skip: (page - 1) * limit,
                 take: parseInt(limit),
                 include: {
@@ -309,26 +335,29 @@ exports.adminReply = async (req, res, next) => {
             return res.status(404).json({ error: '工单不存在' })
         }
 
-        // 创建回复消息
-        const message = await prisma.ticketMessage.create({
-            data: {
-                ticketId: id,
-                senderId: adminId,
-                isAdmin: true,
-                content,
-                images: images || null
-            }
-        })
-
-        // 更新工单状态
         const newStatus = updateStatus || (ticket.status === 'OPEN' ? 'IN_PROGRESS' : ticket.status)
-        await prisma.ticket.update({
-            where: { id },
-            data: {
-                status: newStatus,
-                updatedAt: new Date()
-            }
-        })
+        const now = new Date()
+        const [, message] = await prisma.$transaction([
+            prisma.ticket.update({
+                where: { id },
+                data: {
+                    status: newStatus,
+                    updatedAt: now,
+                    userUnreadCount: { increment: 1 },
+                    adminUnreadCount: 0,
+                    adminLastReadAt: now
+                }
+            }),
+            prisma.ticketMessage.create({
+                data: {
+                    ticketId: id,
+                    senderId: adminId,
+                    isAdmin: true,
+                    content,
+                    images: images || null
+                }
+            })
+        ])
 
         // 发送邮件通知用户
         try {

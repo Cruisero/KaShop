@@ -36,7 +36,16 @@ function TicketDetail() {
             return
         }
         fetchTicket()
-    }, [isAuthenticated, id])
+
+        const handleFocus = () => fetchTicket()
+        const intervalId = window.setInterval(fetchTicket, 30000)
+        window.addEventListener('focus', handleFocus)
+
+        return () => {
+            window.clearInterval(intervalId)
+            window.removeEventListener('focus', handleFocus)
+        }
+    }, [isAuthenticated, id, token])
 
     useEffect(() => {
         scrollToBottom()

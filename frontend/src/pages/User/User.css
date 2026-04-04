@@ -832,6 +832,12 @@
     margin: 0;
 }
 
+.tickets-summary {
+    margin: 6px 0 0;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
 .btn-sm {
     padding: 8px 16px;
     font-size: 0.9rem;
@@ -873,13 +879,33 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 8px;
     margin-bottom: 10px;
+}
+
+.ticket-card-embed .ticket-badges {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
 }
 
 .ticket-card-embed .ticket-no {
     font-size: 0.8rem;
     font-family: 'SF Mono', 'Consolas', monospace;
     color: var(--text-muted);
+}
+
+.ticket-card-embed .ticket-unread-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: rgba(239, 68, 68, 0.12);
+    color: #dc2626;
+    font-size: 0.74rem;
+    font-weight: 600;
 }
 
 .ticket-card-embed .ticket-status {
@@ -992,6 +1018,10 @@
     .ticket-card-embed .ticket-header {
         flex-wrap: wrap;
         gap: 8px;
+    }
+
+    .ticket-card-embed .ticket-badges {
+        justify-content: flex-start;
     }
 
     .ticket-card-embed .ticket-no {

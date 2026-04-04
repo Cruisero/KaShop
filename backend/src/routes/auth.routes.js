@@ -4,9 +4,13 @@ const authController = require('../controllers/authController')
 const { validateBody } = require('../middleware/validation')
 const { loginSchema, registerSchema } = require('../validators/auth')
 const { authenticate } = require('../middleware/auth')
+const {
+    registerSecurityGuard,
+    registerRateLimiter
+} = require('../middleware/security')
 
 // 用户注册
-router.post('/register', validateBody(registerSchema), authController.register)
+router.post('/register', registerRateLimiter, registerSecurityGuard, validateBody(registerSchema), authController.register)
 
 // 用户登录
 router.post('/login', validateBody(loginSchema), authController.login)

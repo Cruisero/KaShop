@@ -31,7 +31,16 @@ function Tickets() {
             return
         }
         fetchTickets()
-    }, [isAuthenticated, filter])
+
+        const handleFocus = () => fetchTickets()
+        const intervalId = window.setInterval(fetchTickets, 30000)
+        window.addEventListener('focus', handleFocus)
+
+        return () => {
+            window.clearInterval(intervalId)
+            window.removeEventListener('focus', handleFocus)
+        }
+    }, [isAuthenticated, filter, token])
 
     const fetchTickets = async () => {
         try {
@@ -64,6 +73,8 @@ function Tickets() {
         return date.toLocaleDateString('zh-CN')
     }
 
+    const unreadCount = tickets.reduce((sum, ticket) => sum + (ticket.userUnreadCount || 0), 0)
+
     if (loading) {
         return (
             <div className="tickets-page">
@@ -77,7 +88,7 @@ function Tickets() {
             <div className="tickets-header">
                 <div className="header-left">
                     <h1>我的工单</h1>
-                    <p>查看和管理您的客服工单</p>
+                    <p>{unreadCount > 0 ? `当前有 ${unreadCount} 条新消息待查看` : '查看和管理您的客服工单'}</p>
                 </div>
                 <Link to="/tickets/new" className="btn btn-primary">
                     <FiPlus />
@@ -139,10 +150,17 @@ function Tickets() {
                         >
                             <div className="ticket-header">
                                 <span className="ticket-no">{ticket.ticketNo}</span>
-                                <span className={`ticket-status ${statusMap[ticket.status]?.class}`}>
-                                    {statusMap[ticket.status]?.icon}
-                                    {statusMap[ticket.status]?.label}
-                                </span>
+                                <div className="ticket-badges">
+                                    {ticket.userUnreadCount > 0 && (
+                                        <span className="ticket-unread-badge">
+                                            {ticket.userUnreadCount > 99 ? '99+' : ticket.userUnreadCount} 条新消息
+                                        </span>
+                                    )}
+                                    <span className={`ticket-status ${statusMap[ticket.status]?.class}`}>
+                                        {statusMap[ticket.status]?.icon}
+                                        {statusMap[ticket.status]?.label}
+                                    </span>
+                                </div>
                             </div>
                             <h3 className="ticket-subject">{ticket.subject}</h3>
                             <div className="ticket-meta">
@@ -158,7 +176,9 @@ function Tickets() {
                                 </span>
                                 <span className="ticket-messages">
                                     <FiMessageCircle />
-                                    {ticket._count?.messages || 0} 条消息
+                                    {ticket.userUnreadCount > 0
+                                        ? `${ticket._count?.messages || 0} 条消息 / ${ticket.userUnreadCount} 条未读`
+                                        : `${ticket._count?.messages || 0} 条消息`}
                                 </span>
                             </div>
                         </Link>
